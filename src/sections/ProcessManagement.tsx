@@ -12,6 +12,7 @@ import {
   TrendingUp
 } from 'lucide-react'
 import { getNextProcess, Process } from '../logic/processSim'
+import { AlgorithmDeepDive } from '../components/AlgorithmDeepDive'
 
 export const ProcessManagement = () => {
   const [processes, setProcesses] = useState<Process[]>([
@@ -385,6 +386,8 @@ export const ProcessManagement = () => {
            </div>
         </div>
       </div>
+      
+      <AlgorithmDeepDive algorithm={algorithm} />
     </div>
   )
 }
