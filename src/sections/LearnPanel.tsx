@@ -1,168 +1,164 @@
-import { useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
-import { BookOpen, Code2, ChevronRight, GraduationCap, Lightbulb } from 'lucide-react'
+import { motion } from 'framer-motion'
+import { 
+  BookOpen, 
+  Cpu, 
+  GitBranch, 
+  Lock, 
+  RefreshCcw, 
+  Zap, 
+  ExternalLink,
+  ChevronRight,
+  ShieldCheck,
+  Activity,
+  Layers
+} from 'lucide-react'
 
-const theoryItems = [
+const concepts = [
   {
-    id: 'process',
     title: 'Process Management',
-    description: 'A process is an instance of a computer program that is being executed. It contains the program code and its current activity.',
-    analogy: 'Think of a recipe (program) being cooked by a chef (CPU). The actual cooking session is the Process.',
-    cCode: `#include <stdio.h>
-#include <unistd.h>
-
-int main() {
-    pid_t pid = fork();
-    if (pid < 0) {
-        printf("Fork Failed\\n");
-    } else if (pid == 0) {
-        printf("Child Process: ID %d\\n", getpid());
-    } else {
-        printf("Parent Process: ID %d\\n", getpid());
-    }
-    return 0;
-}`
+    icon: Cpu,
+    color: 'text-primary',
+    bg: 'bg-primary/10',
+    desc: 'Learn about PCB, context switching, and scheduling algorithms like FCFS, SJF, and Round Robin.',
+    topics: ['Process Life Cycle', 'Context Switching', 'Scheduling Metrics']
   },
   {
-    id: 'thread',
-    title: 'Thread Management',
-    description: 'Threads are the smallest unit of execution within a process. Multiple threads share the same address space but have their own stack.',
-    analogy: 'Multiple workers in the same kitchen sharing the same ingredients but doing different tasks.',
-    cCode: `#include <pthread.h>
-#include <stdio.h>
-
-void* print_hello(void* id) {
-    printf("Thread %ld starting...\\n", (long)id);
-    return NULL;
-}
-
-int main() {
-    pthread_t threads[2];
-    for (long i = 0; i < 2; i++)
-        pthread_create(&threads[i], NULL, print_hello, (void*)i);
-    for (int i = 0; i < 2; i++)
-        pthread_join(threads[i], NULL);
-    return 0;
-}`
+    title: 'Thread Engineering',
+    icon: GitBranch,
+    color: 'text-secondary',
+    bg: 'bg-secondary/10',
+    desc: 'Explore Light Weight Processes (LWP), kernel-level vs user-level threads, and multi-core execution.',
+    topics: ['Hyperthreading', 'Thread Pools', 'Race Conditions']
   },
   {
-    id: 'deadlock',
-    title: 'Deadlock & Banker\'s',
-    description: 'Deadlock is a situation where a set of processes are blocked because each is holding a resource and waiting for another resource held by another process.',
-    analogy: 'Two people trying to pass each other on a narrow bridge, neither willing to step back.',
-    cCode: `// Banker's Algorithm Allocation Step
-void allocate(int res[], int need[], int avail[]) {
-    for (int i = 0; i < RESOURCES; i++) {
-        if (need[i] <= avail[i]) {
-            avail[i] += allocation[i];
-            finish[i] = 1;
-        }
-    }
-}`
+    title: 'Deadlock Control',
+    icon: Lock,
+    color: 'text-accent',
+    bg: 'bg-accent/10',
+    desc: 'Understand the four necessary conditions for deadlock and the Banker\'s avoidance algorithm.',
+    topics: ['Mutual Exclusion', 'Circular Wait', 'Safe States']
   },
   {
-    id: 'sync',
-    title: 'Synchronization',
-    description: 'Mechanism to ensure that two or more concurrent processes or threads do not simultaneously execute a critical section.',
-    analogy: 'A key to a single bathroom - whoever has the key gets in; others must wait.',
-    cCode: `#include <semaphore.h>
-sem_t mutex;
-
-void* thread_func(void* arg) {
-    sem_wait(&mutex); // Lock
-    // Critical Section
-    sem_post(&mutex); // Unlock
-}`
+    title: 'Sync Mechanisms',
+    icon: RefreshCcw,
+    color: 'text-green-500',
+    bg: 'bg-green-500/10',
+    desc: 'Master semaphores, mutexes, and monitors. Solve the Dining Philosophers and Producer-Consumer problems.',
+    topics: ['Atomic Operations', 'Critical Sections', 'Condition Variables']
   }
 ]
 
 export const LearnPanel = () => {
-  const [selectedId, setSelectedId] = useState<string | null>(theoryItems[0].id)
-
   return (
-    <div className="p-8 space-y-8 max-w-7xl mx-auto h-full flex flex-col">
-      <div className="flex items-center gap-4">
-        <div className="p-3 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400">
-          <GraduationCap size={32} />
+    <div className="p-12 space-y-16 max-w-7xl mx-auto custom-scrollbar">
+      {/* Header */}
+      <div className="flex items-center justify-between glass p-10 rounded-[3rem] border-white/[0.05]">
+        <div className="flex items-center gap-8">
+          <div className="w-20 h-20 rounded-[2rem] bg-primary/10 flex items-center justify-center text-primary shadow-[0_0_30px_rgba(0,243,255,0.15)]">
+            <BookOpen size={40} />
+          </div>
+          <div>
+            <h1 className="text-4xl font-black italic uppercase tracking-tighter mb-2">ProcessVerse Academy</h1>
+            <p className="text-slate-500 font-mono text-[10px] uppercase tracking-widest flex items-center gap-2">
+              <ShieldCheck size={12} className="text-primary" /> 
+              Curriculum Core: v2.0
+            </p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-3xl font-bold text-slate-100 uppercase tracking-tight">Theory Academy</h1>
-          <p className="text-slate-400">Master the fundamental concepts of Operating Systems.</p>
+        <div className="flex items-center gap-4 text-xs font-bold text-slate-500 uppercase tracking-widest bg-white/5 px-6 py-4 rounded-2xl border border-white/10">
+           <Activity size={16} className="text-primary animate-pulse" />
+           Learning Pulse: Active
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 flex-1 overflow-hidden">
-        {/* Navigation List */}
-        <div className="lg:col-span-4 space-y-4 overflow-y-auto pr-2 custom-scrollbar">
-          {theoryItems.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => setSelectedId(item.id)}
-              className={`w-full text-left p-6 rounded-3xl transition-all duration-300 group border ${
-                selectedId === item.id 
-                ? 'bg-indigo-500/10 border-indigo-500/30 shadow-lg' 
-                : 'bg-slate-900/40 border-slate-800 hover:border-slate-700'
-              }`}
-            >
-              <div className="flex items-center justify-between">
-                <h3 className={`font-bold transition-colors ${selectedId === item.id ? 'text-indigo-400' : 'text-slate-400'}`}>
-                  {item.title}
-                </h3>
-                <ChevronRight size={18} className={selectedId === item.id ? 'text-indigo-400' : 'text-slate-600'} />
-              </div>
-              <p className="text-xs text-slate-500 mt-2 line-clamp-2 leading-relaxed">{item.description}</p>
+      {/* Concept Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+        {concepts.map((c, i) => (
+          <motion.div
+            key={c.title}
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.1 }}
+            className="glass-card flex flex-col gap-10 group"
+          >
+             <div className="flex items-center justify-between">
+                <div className={`p-5 rounded-3xl ${c.bg} ${c.color} shadow-inner`}>
+                   <c.icon size={32} />
+                </div>
+                <div className="p-3 rounded-2xl glass border-white/5 text-slate-600 group-hover:text-primary transition-colors cursor-pointer">
+                   <Maximize2 size={20} className="hidden" />
+                   <ChevronRight size={24} />
+                </div>
+             </div>
+
+             <div className="space-y-4">
+                <h3 className="text-3xl font-black italic tracking-tight">{c.title}</h3>
+                <p className="text-slate-400 font-medium leading-relaxed">
+                   {c.desc}
+                </p>
+             </div>
+
+             <div className="flex flex-wrap gap-2">
+                {c.topics.map(topic => (
+                  <span key={topic} className="px-4 py-2 rounded-xl bg-white/[0.03] border border-white/10 text-[10px] font-bold text-slate-500 uppercase tracking-widest group-hover:border-primary/20 group-hover:text-slate-300 transition-all">
+                     {topic}
+                  </span>
+                ))}
+             </div>
+
+             <div className="pt-6 border-t border-white/5 flex items-center justify-between">
+                <span className="text-[10px] font-black uppercase tracking-[0.3em] text-primary/50 group-hover:text-primary transition-colors">Start Module</span>
+                <div className="flex gap-1">
+                   {[1, 2, 3].map(dot => <div key={dot} className="w-1 h-1 rounded-full bg-slate-800" />)}
+                </div>
+             </div>
+          </motion.div>
+        ))}
+      </div>
+
+      {/* Advanced Research Resources */}
+      <section className="glass rounded-[3.5rem] p-16 border-white/[0.05] relative overflow-hidden group">
+         <div className="absolute top-0 right-0 p-16 text-primary/5 -z-10 group-hover:scale-110 transition-transform duration-1000">
+            <Layers size={200} />
+         </div>
+
+         <div className="max-w-3xl space-y-10">
+            <div className="space-y-4">
+               <h3 className="text-[10px] font-black text-primary uppercase tracking-[0.4em] mono">Advanced Engineering</h3>
+               <h2 className="text-5xl font-black italic uppercase tracking-tighter italic">Deep Dive Resources</h2>
+               <p className="text-slate-400 text-lg font-medium leading-relaxed">
+                 Access peer-reviewed documentation, kernel source snippets, and advanced simulation parameters to extend your knowledge.
+               </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+               {[
+                 'Kernel Synchronization Primitives',
+                 'Advanced Scheduler Architecture',
+                 'Memory Subsystem Engineering',
+                 'Distributed Systems Logic'
+               ].map((res) => (
+                 <div key={res} className="p-6 rounded-3xl bg-white/[0.02] border border-white/5 flex items-center justify-between group/res cursor-pointer hover:bg-white/[0.05] transition-all">
+                    <span className="text-xs font-bold text-slate-300 uppercase tracking-widest">{res}</span>
+                    <ExternalLink size={16} className="text-slate-600 group-hover/res:text-primary transition-colors" />
+                 </div>
+               ))}
+            </div>
+            
+            <button className="btn-primary px-10 py-4 flex items-center gap-3 text-sm">
+               Open Knowledge Base
+               <Zap size={18} fill="currentColor" />
             </button>
-          ))}
-        </div>
-
-        {/* Content Display */}
-        <div className="lg:col-span-8 glass rounded-[2.5rem] border-slate-800 p-10 flex flex-col gap-10 overflow-hidden relative">
-           <AnimatePresence mode="wait">
-             {selectedId && (
-               <motion.div 
-                 key={selectedId}
-                 initial={{ opacity: 0, x: 20 }}
-                 animate={{ opacity: 1, x: 0 }}
-                 exit={{ opacity: 0, x: -20 }}
-                 className="flex flex-col gap-10 h-full overflow-y-auto pr-4 custom-scrollbar"
-               >
-                  <div className="space-y-4">
-                    <h2 className="text-4xl font-extrabold text-slate-100 flex items-center gap-4">
-                       <BookOpen size={36} className="text-indigo-500" />
-                       {theoryItems.find(t => t.id === selectedId)?.title}
-                    </h2>
-                    <p className="text-lg text-slate-300 leading-relaxed font-medium">
-                      {theoryItems.find(t => t.id === selectedId)?.description}
-                    </p>
-                  </div>
-
-                  <div className="p-8 rounded-[2rem] bg-indigo-500/5 border border-indigo-500/10 relative overflow-hidden">
-                     <Lightbulb className="absolute top-4 right-4 text-indigo-500/20" size={80} />
-                     <h4 className="text-indigo-400 font-bold uppercase tracking-widest text-xs mb-3">Real-Life Analogy</h4>
-                     <p className="text-slate-200 italic text-lg leading-relaxed relative z-10">
-                       "{theoryItems.find(t => t.id === selectedId)?.analogy}"
-                     </p>
-                  </div>
-
-                  <div className="flex flex-col gap-4">
-                    <div className="flex items-center justify-between">
-                       <div className="flex items-center gap-2 text-slate-400 text-xs font-mono uppercase tracking-[0.2em]">
-                          <Code2 size={16} />
-                          C Implementation Example
-                       </div>
-                       <button className="text-[10px] uppercase font-bold text-indigo-400 hover:text-indigo-300 transition-colors">Copy Snippet</button>
-                    </div>
-                    <div className="p-6 rounded-3xl bg-slate-950/80 border border-slate-800 font-mono text-sm leading-relaxed text-indigo-100 shadow-inner">
-                       <pre className="whitespace-pre-wrap">
-                          {theoryItems.find(t => t.id === selectedId)?.cCode}
-                       </pre>
-                    </div>
-                  </div>
-               </motion.div>
-             )}
-           </AnimatePresence>
-        </div>
-      </div>
+         </div>
+         
+         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary/20 to-transparent" />
+      </section>
     </div>
   )
 }
+
+const Maximize2 = ({ size, className }: { size: number, className: string }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <polyline points="15 3 21 3 21 9" /><polyline points="9 21 3 21 3 15" /><line x1="21" y1="3" x2="14" y2="10" /><line x1="3" y1="21" x2="10" y2="14" />
+  </svg>
+)
