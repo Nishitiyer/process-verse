@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
   GitBranch, 
@@ -12,7 +12,7 @@ import {
   User,
   ShieldCheck
 } from 'lucide-react'
-import { Thread, createThread, THREAD_COLORS } from '../logic/threadSim'
+import { Thread, createThread } from '../logic/threadSim'
 
 export const ThreadManagement = () => {
   const [threads, setThreads] = useState<Thread[]>([

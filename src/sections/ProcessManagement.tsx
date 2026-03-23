@@ -1,11 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
   Play, 
   Pause, 
   RotateCcw, 
   Plus, 
-  Trash2, 
   Cpu, 
   Clock, 
   ArrowRight,
@@ -33,7 +32,7 @@ export const ProcessManagement = () => {
   const [terminatedProcesses, setTerminatedProcesses] = useState<Process[]>([])
   const [ganttData, setGanttData] = useState<{pid: number, start: number, end: number, color: string}[]>([])
   const [quantum, setQuantum] = useState(2)
-  const [timeStep, setTimeStep] = useState(500) // ms per tick
+  const [timeStep] = useState(500) // ms per tick
 
   const timerRef = useRef<any>(null)
 
@@ -82,11 +81,10 @@ export const ProcessManagement = () => {
 
     let updatedRunningProcess = runningProcess
     let updatedGantt = [...ganttData]
-    let remainingProcesses = processes.filter(p => p.state !== 'ready' && p.state !== 'new')
 
     // 2. If no process is running, pick one from ready queue
     if (!updatedRunningProcess && updatedReadyQueue.length > 0) {
-      const next = getNextProcess(updatedReadyQueue, algorithm, currentTime)
+      const next = getNextProcess(updatedReadyQueue, algorithm)
       if (next) {
         updatedRunningProcess = { ...next, state: 'running' }
         updatedReadyQueue = updatedReadyQueue.filter(p => p.id !== next.id)

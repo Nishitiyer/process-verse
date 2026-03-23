@@ -42,8 +42,7 @@ export const createProcess = (id: number, arrival: number, burst: number, priori
 // Scheduling logic (simplified for simulation steps)
 export const getNextProcess = (
   readyQueue: Process[], 
-  algorithm: SchedulingAlgorithm,
-  _currentTime: number
+  algorithm: SchedulingAlgorithm
 ): Process | null => {
   if (readyQueue.length === 0) return null;
 

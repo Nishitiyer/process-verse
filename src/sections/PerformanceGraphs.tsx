@@ -1,5 +1,3 @@
-import React from 'react'
-import { motion } from 'framer-motion'
 import { 
   BarChart, 
   Bar, 
@@ -65,7 +63,7 @@ export const PerformanceGraphs = () => {
                       contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '12px' }}
                     />
                     <Bar dataKey="time" radius={[8, 8, 0, 0]}>
-                       {waitTimeData.map((entry, index) => (
+                       {waitTimeData.map((_entry, index) => (
                          <Cell key={`cell-${index}`} fill={index === 1 ? '#00f3ff' : '#1e293b'} stroke={index === 1 ? '#00f3ff' : '#334155'} />
                        ))}
                     </Bar>
@@ -120,9 +118,9 @@ export const PerformanceGraphs = () => {
                        paddingAngle={5}
                        dataKey="value"
                     >
-                       {stateDistribution.map((entry, index) => (
-                         <Cell key={`cell-${index}`} fill={entry.color} />
-                       ))}
+                        {stateDistribution.map((_entry, index) => (
+                          <Cell key={`cell-${index}`} fill={_entry.color} />
+                        ))}
                     </Pie>
                     <RechartsTooltip />
                  </PieChart>

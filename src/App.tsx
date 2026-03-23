@@ -10,7 +10,6 @@ import {
   BookOpen,
   Settings as SettingsIcon,
   Play,
-  Pause,
   RotateCcw,
   SkipForward
 } from 'lucide-react'

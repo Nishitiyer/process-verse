@@ -1,12 +1,10 @@
-import React, { useState, useEffect } from 'react'
+import { useState, Fragment } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
-  Lock, 
   RefreshCcw, 
   CheckCircle2, 
   AlertTriangle, 
   Play, 
-  Cpu, 
   Database,
   ArrowRight,
   ShieldAlert
@@ -17,16 +15,14 @@ import {
   checkSafeState 
 } from '../logic/deadlockSim'
 
-const RESOURCE_TYPES = ['R1 (CPU)', 'R2 (Memory)', 'R3 (I/O)'];
-
 export const DeadlockSimulator = () => {
-  const [resources, setResources] = useState<Resource[]>([
+  const [resources] = useState<Resource[]>([
     { id: '1', name: 'CPU', total: 10, available: 3, color: '#00f3ff' },
     { id: '2', name: 'Memory', total: 5, available: 3, color: '#9d00ff' },
     { id: '3', name: 'Disk', total: 7, available: 2, color: '#ff004c' },
   ])
 
-  const [processes, setProcesses] = useState<DeadlockProcess[]>([
+  const [processes] = useState<DeadlockProcess[]>([
     { id: 1, name: 'P1', allocation: [0, 1, 0], max: [7, 5, 3], need: [7, 4, 3], color: '#00f3ff' },
     { id: 2, name: 'P2', allocation: [2, 0, 0], max: [3, 2, 2], need: [1, 2, 2], color: '#9d00ff' },
     { id: 3, name: 'P3', allocation: [3, 0, 2], max: [9, 0, 2], need: [6, 0, 0], color: '#ff004c' },
@@ -206,14 +202,14 @@ export const DeadlockSimulator = () => {
                   {safeState.safe && (
                     <div className="flex items-center gap-4 flex-wrap">
                       {safeState.sequence.map((pid, idx) => (
-                        <React.Fragment key={pid}>
+                        <Fragment key={pid}>
                           <div className="flex flex-col items-center">
                             <div className="w-12 h-12 rounded-2xl bg-cyan-500 text-black flex items-center justify-center font-bold text-lg shadow-lg">
                               P{pid}
                             </div>
                           </div>
                           {idx < safeState.sequence.length - 1 && <ArrowRight size={20} className="text-slate-600" />}
-                        </React.Fragment>
+                        </Fragment>
                       ))}
                     </div>
                   )}

@@ -1,4 +1,3 @@
-import React from 'react'
 import { motion } from 'framer-motion'
 import { Activity, Cpu, Users, Zap, AlertTriangle, CheckCircle2 } from 'lucide-react'
 import { 
@@ -8,10 +7,7 @@ import {
   YAxis, 
   CartesianGrid, 
   Tooltip, 
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  Cell
+  ResponsiveContainer
 } from 'recharts'
 
 const StatCard = ({ icon: Icon, label, value, color, delay }: any) => (
