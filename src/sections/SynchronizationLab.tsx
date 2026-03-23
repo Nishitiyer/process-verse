@@ -40,6 +40,17 @@ export const SynchronizationLab = () => {
   const timerRef = useRef<any>(null)
 
   useEffect(() => {
+    const handlePlay = () => setIsRunning(r => !r)
+    const handleReset = () => resetSync()
+    window.addEventListener('GLOBAL_PLAY_TOGGLE', handlePlay)
+    window.addEventListener('GLOBAL_RESET', handleReset)
+    return () => {
+      window.removeEventListener('GLOBAL_PLAY_TOGGLE', handlePlay)
+      window.removeEventListener('GLOBAL_RESET', handleReset)
+    }
+  }, [])
+
+  useEffect(() => {
     if (isRunning) {
       timerRef.current = setInterval(() => {
         simulateStep()

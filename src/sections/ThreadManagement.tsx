@@ -57,7 +57,18 @@ export const ThreadManagement = () => {
       setCpuUsage(0)
     }
     return () => clearInterval(timerRef.current)
-  }, [isRunning])
+  }, [isRunning, threads])
+
+  useEffect(() => {
+    const handlePlay = () => setIsRunning(r => !r)
+    const handleReset = () => resetThreads()
+    window.addEventListener('GLOBAL_PLAY_TOGGLE', handlePlay)
+    window.addEventListener('GLOBAL_RESET', handleReset)
+    return () => {
+      window.removeEventListener('GLOBAL_PLAY_TOGGLE', handlePlay)
+      window.removeEventListener('GLOBAL_RESET', handleReset)
+    }
+  }, [])
 
   const addThread = () => {
     const newId = threads.length + 1

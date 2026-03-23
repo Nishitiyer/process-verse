@@ -7,7 +7,9 @@ import {
   Lock, 
   RefreshCcw, 
   BarChart3, 
-  BookOpen
+  BookOpen,
+  Play,
+  RotateCcw
 } from 'lucide-react'
 
 import { Dashboard } from './sections/Dashboard'
@@ -112,6 +114,22 @@ function App() {
                 <span className="text-slate-500 uppercase tracking-tighter">Memory</span>
                 <span className="text-secondary font-bold">4.2 GB</span>
               </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <button 
+                onClick={() => window.dispatchEvent(new CustomEvent('GLOBAL_RESET'))}
+                className="w-10 h-10 rounded-2xl glass flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 transition-all border-slate-800"
+              >
+                <RotateCcw size={18} />
+              </button>
+              <button 
+                onClick={() => window.dispatchEvent(new CustomEvent('GLOBAL_PLAY_TOGGLE'))}
+                className="px-5 py-2.5 rounded-2xl bg-primary text-black font-black text-[10px] uppercase tracking-widest shadow-[0_0_20px_rgba(0,243,255,0.2)] hover:shadow-[0_0_30px_rgba(0,243,255,0.4)] transition-all flex items-center gap-2 active:scale-95"
+              >
+                <Play size={14} fill="currentColor" />
+                Live Run Toggle
+              </button>
             </div>
           </div>
         </header>

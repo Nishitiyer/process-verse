@@ -23,7 +23,7 @@ export const ProcessManagement = () => {
   const [readyQueue, setReadyQueue] = useState<Process[]>([])
   const [ganttData, setGanttData] = useState<{pid: number, start: number, end: number, color: string}[]>([])
   const [algorithm, setAlgorithm] = useState<'FCFS'|'SJF'|'Priority'|'RR'>('FCFS')
-  const [quantum] = useState(2)
+  const [quantum, setQuantum] = useState(2)
   const [timeStep] = useState(500) // ms per tick
 
   const [isRunning, setIsRunning] = useState(false)
@@ -100,21 +100,41 @@ export const ProcessManagement = () => {
     setGanttData(updatedGantt)
   }
 
-  const addNewProcess = () => {
+  // Form State
+  const [showAddForm, setShowAddForm] = useState(false)
+  const [newBurst, setNewBurst] = useState(4)
+  const [newPriority, setNewPriority] = useState(1)
+
+  useEffect(() => {
+    const handlePlay = () => setIsRunning(r => !r)
+    const handleReset = () => resetSim()
+    window.addEventListener('GLOBAL_PLAY_TOGGLE', handlePlay)
+    window.addEventListener('GLOBAL_RESET', handleReset)
+    return () => {
+      window.removeEventListener('GLOBAL_PLAY_TOGGLE', handlePlay)
+      window.removeEventListener('GLOBAL_RESET', handleReset)
+    }
+  }, [])
+
+  const submitNewProcess = () => {
     const newId = processes.length + 1
     const p: Process = {
       id: newId,
       name: `Task-${newId}`,
-      arrivalTime: Math.max(0, currentTime + Math.floor(Math.random() * 3)),
-      burstTime: Math.floor(Math.random() * 5) + 2,
-      remainingTime: 0,
-      priority: Math.floor(Math.random() * 3),
+      arrivalTime: Math.max(0, currentTime), // enters at current tick
+      burstTime: newBurst,
+      remainingTime: newBurst,
+      priority: newPriority,
       state: 'new',
       color: ['#00f3ff', '#9d00ff', '#ff004c', '#00ff8a', '#ff8a00'][newId % 5],
       waitingTime: 0, turnaroundTime: 0
     }
-    p.remainingTime = p.burstTime
     setProcesses([...processes, p])
+    setShowAddForm(false)
+    
+    // Reset form
+    setNewBurst(4)
+    setNewPriority(1)
   }
 
   const cycleAlgorithm = () => {
@@ -181,10 +201,37 @@ export const ProcessManagement = () => {
               <h3 className="text-sm font-black uppercase tracking-[0.2em] text-slate-500 border-b border-white/5 pb-4">Control Unit</h3>
               
               <div className="space-y-4">
-                 <button onClick={addNewProcess} className="w-full sidebar-item border border-white/5 hover:border-primary/30 group">
-                    <Plus size={20} className="text-primary" />
-                    <span className="font-bold text-sm">Add New Process</span>
-                 </button>
+                 {!showAddForm ? (
+                   <button onClick={() => setShowAddForm(true)} className="w-full sidebar-item border border-white/5 hover:border-primary/30 group">
+                      <Plus size={20} className="text-primary" />
+                      <span className="font-bold text-sm">Add New Process</span>
+                   </button>
+                 ) : (
+                   <div className="p-6 rounded-3xl bg-white/[0.02] border border-primary/20 space-y-4 shadow-[0_0_20px_rgba(0,243,255,0.05)]">
+                      <div className="flex items-center justify-between">
+                         <span className="text-[10px] uppercase font-bold text-slate-400">Burst Time (T)</span>
+                         <div className="flex items-center gap-3">
+                           <button onClick={() => setNewBurst(Math.max(1, newBurst - 1))} className="w-6 h-6 rounded bg-white/5 hover:bg-white/10 flex items-center justify-center font-bold text-slate-300">-</button>
+                           <span className="font-mono text-primary font-bold w-4 text-center">{newBurst}</span>
+                           <button onClick={() => setNewBurst(newBurst + 1)} className="w-6 h-6 rounded bg-white/5 hover:bg-white/10 flex items-center justify-center font-bold text-slate-300">+</button>
+                         </div>
+                      </div>
+                      {algorithm === 'Priority' && (
+                        <div className="flex items-center justify-between">
+                           <span className="text-[10px] uppercase font-bold text-slate-400">Priority (0=High)</span>
+                           <div className="flex items-center gap-3">
+                             <button onClick={() => setNewPriority(Math.max(0, newPriority - 1))} className="w-6 h-6 rounded bg-white/5 hover:bg-white/10 flex items-center justify-center font-bold text-slate-300">-</button>
+                             <span className="font-mono text-accent font-bold w-4 text-center">{newPriority}</span>
+                             <button onClick={() => setNewPriority(newPriority + 1)} className="w-6 h-6 rounded bg-white/5 hover:bg-white/10 flex items-center justify-center font-bold text-slate-300">+</button>
+                           </div>
+                        </div>
+                      )}
+                      <div className="flex gap-2 pt-2">
+                         <button onClick={() => setShowAddForm(false)} className="flex-1 py-2 rounded-xl border border-white/10 text-xs font-bold text-slate-400 hover:text-white hover:bg-white/5">Cancel</button>
+                         <button onClick={submitNewProcess} className="flex-1 py-2 rounded-xl bg-primary text-black text-xs font-black uppercase tracking-widest hover:shadow-[0_0_15px_rgba(0,243,255,0.4)]">Deploy</button>
+                      </div>
+                   </div>
+                 )}
                  
                  <div className="p-6 rounded-3xl bg-black/40 border border-white/5 space-y-4">
                     <div className="flex justify-between items-center text-[10px] uppercase font-bold text-slate-500 tracking-widest">
@@ -195,7 +242,11 @@ export const ProcessManagement = () => {
                     </div>
                     <div className="flex justify-between items-center text-[10px] uppercase font-bold text-slate-500 tracking-widest">
                        <span>Time Quantum</span>
-                       <span className="text-secondary font-mono bg-secondary/10 px-2 py-0.5 rounded">{quantum} ticks</span>
+                       <div className="flex items-center gap-1.5">
+                         <button onClick={() => setQuantum(Math.max(1, quantum - 1))} className="w-5 h-5 rounded hover:bg-white/10 flex items-center justify-center text-slate-400 font-bold">-</button>
+                         <span className="text-secondary font-mono bg-secondary/10 px-2 py-0.5 rounded">{quantum}T</span>
+                         <button onClick={() => setQuantum(quantum + 1)} className="w-5 h-5 rounded hover:bg-white/10 flex items-center justify-center text-slate-400 font-bold">+</button>
+                       </div>
                     </div>
                  </div>
               </div>

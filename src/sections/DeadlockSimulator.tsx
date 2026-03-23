@@ -1,4 +1,4 @@
-import { useState, Fragment } from 'react'
+import { useState, Fragment, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
   RefreshCcw, 
@@ -36,6 +36,17 @@ export const DeadlockSimulator = () => {
   const [safeState, setSafeState] = useState<{ safe: boolean, sequence: number[] } | null>(null)
   const [isSimulating, setIsSimulating] = useState(false)
 
+  useEffect(() => {
+    const handlePlay = () => setIsSimulating(r => !r)
+    const handleReset = () => resetBanker()
+    window.addEventListener('GLOBAL_PLAY_TOGGLE', handlePlay)
+    window.addEventListener('GLOBAL_RESET', handleReset)
+    return () => {
+      window.removeEventListener('GLOBAL_PLAY_TOGGLE', handlePlay)
+      window.removeEventListener('GLOBAL_RESET', handleReset)
+    }
+  }, [])
+  
   const runBanker = () => {
     const available = resources.map(r => r.available)
     const result = checkSafeState(processes, available)
