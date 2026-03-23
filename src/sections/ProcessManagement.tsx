@@ -48,73 +48,108 @@ export const ProcessManagement = () => {
   const tick = () => {
     setCurrentTime(prev => prev + 1)
     
-    let updatedProcesses = [...processes]
-    let updatedReadyQueue = [...readyQueue]
+    let nextLogs: TraceLog[] = []
     
-    // 1. Handle arrivals
-    updatedProcesses.forEach(p => {
-      if (p.arrivalTime === currentTime && p.state === 'new') {
-        p.state = 'ready'
-        updatedReadyQueue.push(p)
-        setLogs(prev => [...prev.slice(-20), { id: Date.now().toString() + p.id, timestamp: new Date().toISOString().split('T')[1].slice(0, 11), code: `enqueue(ready_queue, P${p.id});`, explanation: `Process ${p.name} arrived at Time ${currentTime} and entered the Ready Queue.` }])
-      }
+    // Use functional updaters but keep them flat
+    setProcesses(prevProcesses => {
+      const updatedProcesses = prevProcesses.map(p => ({ ...p }))
+      
+      // 1. Arrival Logic
+      updatedProcesses.forEach(p => {
+        if (p.arrivalTime === currentTime && p.state === 'new') {
+          p.state = 'ready'
+          nextLogs.push({ id: `arr-${p.id}-${currentTime}`, timestamp: new Date().toISOString().split('T')[1].slice(0, 11), code: `enqueue(ready_queue, P${p.id});`, explanation: `Process ${p.name} arrived at Time ${currentTime}.` })
+        }
+      })
+
+      // 2. Scheduler & Execution Logic
+      setRunningProcess(prevRunning => {
+        let currentRunning = prevRunning ? { ...prevRunning } : null
+        
+        setReadyQueue(prevReady => {
+          let updatedReady = [...prevReady]
+          // Sync readyQueue with any changes from arrival logic
+          const newlyReady = updatedProcesses.filter(p => p.state === 'ready' && !prevReady.find(r => r.id === p.id) && (!prevRunning || prevRunning.id !== p.id))
+          newlyReady.forEach(p => { if(!updatedReady.find(r => r.id === p.id)) updatedReady.push({ ...p }) })
+
+          setGanttData(prevGantt => {
+            const updatedGantt = prevGantt.map(g => ({ ...g }))
+
+            if (!currentRunning && updatedReady.length > 0) {
+              const picked = getNextProcess(updatedReady, algorithm)
+              if (picked) {
+                currentRunning = { ...picked, state: 'running' }
+                updatedReady = updatedReady.filter(p => p.id !== picked.id)
+                quantumRef.current = 0
+                nextLogs.push({ id: `sched-${picked.id}-${currentTime}`, timestamp: new Date().toISOString().split('T')[1].slice(0, 11), code: `dispatch(P${picked.id}, ${algorithm});`, explanation: `Scheduler selected Process ${picked.id}.` })
+                updatedGantt.push({ pid: picked.id, start: currentTime, end: currentTime + 1, color: picked.color })
+              }
+            } else if (currentRunning) {
+              currentRunning.burstTime -= 1
+              if (updatedGantt.length > 0) updatedGantt[updatedGantt.length - 1].end = currentTime + 1
+              quantumRef.current += 1
+
+              if (currentRunning.burstTime <= 0) {
+                const finishedId = currentRunning.id
+                currentRunning.state = 'terminated'
+                currentRunning.turnaroundTime = (currentTime + 1) - currentRunning.arrivalTime
+                
+                // Update main list
+                const idx = updatedProcesses.findIndex(px => px.id === finishedId)
+                if (idx !== -1) updatedProcesses[idx] = { ...currentRunning }
+                
+                currentRunning = null
+                quantumRef.current = 0
+                nextLogs.push({ id: `term-${finishedId}-${currentTime}`, timestamp: new Date().toISOString().split('T')[1].slice(0, 11), code: `exit(P${finishedId});`, explanation: `Process ${finishedId} completed.` })
+              } else if (algorithm === 'RR' && quantumRef.current >= quantum) {
+                const tid = currentRunning.id
+                currentRunning.state = 'ready'
+                updatedReady.push({ ...currentRunning })
+                
+                const idx = updatedProcesses.findIndex(px => px.id === tid)
+                if (idx !== -1) updatedProcesses[idx] = { ...currentRunning }
+
+                currentRunning = null
+                quantumRef.current = 0
+                nextLogs.push({ id: `preempt-${tid}-${currentTime}`, timestamp: new Date().toISOString().split('T')[1].slice(0, 11), code: `preempt(P${tid});`, explanation: `Time Quantum expired for P${tid}.` })
+              }
+            }
+            return updatedGantt
+          })
+
+          return updatedReady
+        })
+
+        return currentRunning
+      })
+
+      return updatedProcesses
     })
 
-    let updatedRunningProcess = runningProcess
-    let updatedGantt = [...ganttData]
-
-    // 2. If no process is running, pick one from ready queue
-    if (!updatedRunningProcess && updatedReadyQueue.length > 0) {
-      updatedRunningProcess = getNextProcess(updatedReadyQueue, algorithm)
-      if (updatedRunningProcess) {
-        const selectedId = updatedRunningProcess.id
-        updatedReadyQueue = updatedReadyQueue.filter(p => p.id !== selectedId)
-        updatedRunningProcess.state = 'running'
-        quantumRef.current = 0
-        
-        setLogs(prev => [...prev.slice(-20), { id: Date.now().toString() + "-sched", timestamp: new Date().toISOString().split('T')[1].slice(0, 11), code: `dispatch(P${selectedId}, ${algorithm}); // Context Switch`, explanation: `Scheduler selected Process ${selectedId} based on ${algorithm} logic. Loading process context into CPU.` }])
-
-        updatedGantt.push({
-          pid: updatedRunningProcess.id,
-          start: currentTime,
-          end: currentTime + 1,
-          color: updatedRunningProcess.color
-        })
-      }
-    } else if (updatedRunningProcess) {
-      // 3. Process is running
-      updatedRunningProcess.burstTime -= 1
-      updatedGantt[updatedGantt.length - 1].end = currentTime + 1
-      quantumRef.current += 1
-
-      if (updatedRunningProcess.burstTime <= 0) {
-        const finishedId = updatedRunningProcess.id
-        updatedRunningProcess.state = 'terminated'
-        updatedRunningProcess.turnaroundTime = (currentTime + 1) - updatedRunningProcess.arrivalTime
-        updatedRunningProcess = null
-        quantumRef.current = 0
-        setLogs(prev => [...prev.slice(-20), { id: Date.now().toString() + "-term", timestamp: new Date().toISOString().split('T')[1].slice(0, 11), code: `exit(P${finishedId}); // PCB_CLEANUP`, explanation: `Process ${finishedId} finished its burst. Memory and resources released.` }])
-      } else if (algorithm === 'RR' && quantumRef.current >= quantum) {
-        // Preempt for Round Robin
-        const tid = updatedRunningProcess.id
-        updatedRunningProcess.state = 'ready'
-        updatedReadyQueue.push(updatedRunningProcess)
-        updatedRunningProcess = null
-        quantumRef.current = 0
-        setLogs(prev => [...prev.slice(-20), { id: Date.now().toString() + "-preempt", timestamp: new Date().toISOString().split('T')[1].slice(0, 11), code: `preempt(P${tid}); // Quantum Expired`, explanation: `Time Quantum exceeded. Context saved for P${tid} and moved to back of queue.` }])
-      }
+    if (nextLogs.length > 0) {
+      setLogs(prev => [...prev.slice(-(20 - nextLogs.length)), ...nextLogs])
     }
-
-    setProcesses(updatedProcesses)
-    setReadyQueue(updatedReadyQueue)
-    setRunningProcess(updatedRunningProcess)
-    setGanttData(updatedGantt)
   }
 
   // Form State
   const [showAddForm, setShowAddForm] = useState(false)
   const [newBurst, setNewBurst] = useState(4)
   const [newPriority, setNewPriority] = useState(1)
+
+  const resetSim = () => {
+    setIsRunning(false)
+    setCurrentTime(0)
+    quantumRef.current = 0
+    setProcesses([
+      { id: 1, name: 'Browser', arrivalTime: 0, burstTime: 6, remainingTime: 6, priority: 1, state: 'new', color: '#00f3ff', waitingTime: 0, turnaroundTime: 0 },
+      { id: 2, name: 'System', arrivalTime: 2, burstTime: 4, remainingTime: 4, priority: 0, state: 'new', color: '#9d00ff', waitingTime: 0, turnaroundTime: 0 },
+      { id: 3, name: 'Editor', arrivalTime: 4, burstTime: 3, remainingTime: 3, priority: 2, state: 'new', color: '#ff004c', waitingTime: 0, turnaroundTime: 0 },
+    ])
+    setRunningProcess(null)
+    setReadyQueue([])
+    setGanttData([])
+    setLogs([])
+  }
 
   useEffect(() => {
     const handlePlay = () => setIsRunning(r => !r)
@@ -153,20 +188,6 @@ export const ProcessManagement = () => {
     const nextIdx = (algos.indexOf(algorithm) + 1) % algos.length
     setAlgorithm(algos[nextIdx])
     resetSim()
-  }
-
-  const resetSim = () => {
-    setIsRunning(false)
-    setCurrentTime(0)
-    quantumRef.current = 0
-    setProcesses([
-      { id: 1, name: 'Browser', arrivalTime: 0, burstTime: 6, remainingTime: 6, priority: 1, state: 'new', color: '#00f3ff', waitingTime: 0, turnaroundTime: 0 },
-      { id: 2, name: 'System', arrivalTime: 2, burstTime: 4, remainingTime: 4, priority: 0, state: 'new', color: '#9d00ff', waitingTime: 0, turnaroundTime: 0 },
-      { id: 3, name: 'Editor', arrivalTime: 4, burstTime: 3, remainingTime: 3, priority: 2, state: 'new', color: '#ff004c', waitingTime: 0, turnaroundTime: 0 },
-    ])
-    setRunningProcess(null)
-    setReadyQueue([])
-    setGanttData([])
   }
 
   return (

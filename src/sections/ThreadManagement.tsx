@@ -37,10 +37,10 @@ export const ThreadManagement = () => {
   useEffect(() => {
     if (isRunning) {
       timerRef.current = setInterval(() => {
+        let newLog: TraceLog | null = null
         setThreads(prev => {
           const next = prev.map(t => ({ ...t }))
           const runningIdx = next.findIndex(t => t.state === 'running')
-          let newLog: TraceLog | null = null
           
           if (runningIdx === -1) {
             const readyIdx = next.findIndex(t => t.state === 'ready')
@@ -57,10 +57,9 @@ export const ThreadManagement = () => {
               newLog = { id: Date.now().toString() + "-term", timestamp: new Date().toISOString().split('T')[1].slice(0, 11), code: `pthread_exit(NULL); // Releasing CPU Mutex`, explanation: `Thread ${tid} completed execution and released resources.` }
             }
           }
-
-          if (newLog) setLogs(prevLogs => [...prevLogs.slice(-20), newLog!])
           return next
         })
+        if (newLog) setLogs(prevLogs => [...prevLogs.slice(-20), newLog!])
         setCpuUsage(Math.floor(Math.random() * 30) + 40)
       }, 200)
     } else {

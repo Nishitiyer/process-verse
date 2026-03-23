@@ -148,25 +148,15 @@ function App() {
         </header>
 
         {/* Section Content */}
-        <div className="flex-1 overflow-y-auto custom-scrollbar relative">
-          <AnimatePresence>
-            <motion.div
-              key={activeSection}
-              initial={{ opacity: 0, filter: 'blur(10px)', y: 20 }}
-              animate={{ opacity: 1, filter: 'blur(0px)', y: 0 }}
-              exit={{ opacity: 0, filter: 'blur(10px)', y: -20 }}
-              transition={{ duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
-              className="h-full"
-            >
-              {activeSection === 'dashboard' && <Dashboard onStart={() => setActiveSection('processes')} />}
-              {activeSection === 'processes' && <ProcessManagement />}
-              {activeSection === 'threads' && <ThreadManagement />}
-              {activeSection === 'deadlocks' && <DeadlockSimulator />}
-              {activeSection === 'sync' && <SynchronizationLab />}
-              {activeSection === 'performance' && <PerformanceGraphs />}
-              {activeSection === 'learn' && <LearnPanel />}
-            </motion.div>
-          </AnimatePresence>
+        <div className="flex-1 overflow-y-auto custom-scrollbar relative p-0 m-0">
+          {activeSection === 'dashboard' && <Dashboard onStart={() => setActiveSection('processes')} />}
+          {activeSection === 'processes' && <ProcessManagement />}
+          {activeSection === 'threads' && <ThreadManagement />}
+          {activeSection === 'deadlocks' && <DeadlockSimulator />}
+          {activeSection === 'sync' && <SynchronizationLab />}
+          {activeSection === 'performance' && <PerformanceGraphs />}
+          {activeSection === 'learn' && <LearnPanel />}
+          {!navItems.find(n => n.id === activeSection) && <Dashboard onStart={() => setActiveSection('processes')} />}
         </div>
       </main>
     </div>
