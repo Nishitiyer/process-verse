@@ -13,6 +13,7 @@ import {
 } from 'lucide-react'
 import { getNextProcess, Process } from '../logic/processSim'
 import { AlgorithmDeepDive } from '../components/AlgorithmDeepDive'
+import { LiveCodeTracer, TraceLog } from '../components/LiveCodeTracer'
 
 export const ProcessManagement = () => {
   const [processes, setProcesses] = useState<Process[]>([
@@ -29,6 +30,7 @@ export const ProcessManagement = () => {
 
   const [isRunning, setIsRunning] = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
+  const [logs, setLogs] = useState<TraceLog[]>([])
   const timerRef = useRef<any>(null)
   const quantumRef = useRef(0)
 
@@ -54,6 +56,7 @@ export const ProcessManagement = () => {
       if (p.arrivalTime === currentTime && p.state === 'new') {
         p.state = 'ready'
         updatedReadyQueue.push(p)
+        setLogs(prev => [...prev.slice(-20), { id: Date.now().toString() + p.id, timestamp: new Date().toISOString().split('T')[1].slice(0, 11), code: `enqueue(ready_queue, P${p.id});`, explanation: `Process ${p.name} arrived at Time ${currentTime} and entered the Ready Queue.` }])
       }
     })
 
@@ -64,10 +67,13 @@ export const ProcessManagement = () => {
     if (!updatedRunningProcess && updatedReadyQueue.length > 0) {
       updatedRunningProcess = getNextProcess(updatedReadyQueue, algorithm)
       if (updatedRunningProcess) {
-        updatedReadyQueue = updatedReadyQueue.filter(p => p.id !== updatedRunningProcess!.id)
+        const selectedId = updatedRunningProcess.id
+        updatedReadyQueue = updatedReadyQueue.filter(p => p.id !== selectedId)
         updatedRunningProcess.state = 'running'
         quantumRef.current = 0
         
+        setLogs(prev => [...prev.slice(-20), { id: Date.now().toString() + "-sched", timestamp: new Date().toISOString().split('T')[1].slice(0, 11), code: `dispatch(P${selectedId}, ${algorithm}); // Context Switch`, explanation: `Scheduler selected Process ${selectedId} based on ${algorithm} logic. Loading process context into CPU.` }])
+
         updatedGantt.push({
           pid: updatedRunningProcess.id,
           start: currentTime,
@@ -82,16 +88,20 @@ export const ProcessManagement = () => {
       quantumRef.current += 1
 
       if (updatedRunningProcess.burstTime <= 0) {
+        const finishedId = updatedRunningProcess.id
         updatedRunningProcess.state = 'terminated'
         updatedRunningProcess.turnaroundTime = (currentTime + 1) - updatedRunningProcess.arrivalTime
         updatedRunningProcess = null
         quantumRef.current = 0
+        setLogs(prev => [...prev.slice(-20), { id: Date.now().toString() + "-term", timestamp: new Date().toISOString().split('T')[1].slice(0, 11), code: `exit(P${finishedId}); // PCB_CLEANUP`, explanation: `Process ${finishedId} finished its burst. Memory and resources released.` }])
       } else if (algorithm === 'RR' && quantumRef.current >= quantum) {
         // Preempt for Round Robin
+        const tid = updatedRunningProcess.id
         updatedRunningProcess.state = 'ready'
         updatedReadyQueue.push(updatedRunningProcess)
         updatedRunningProcess = null
         quantumRef.current = 0
+        setLogs(prev => [...prev.slice(-20), { id: Date.now().toString() + "-preempt", timestamp: new Date().toISOString().split('T')[1].slice(0, 11), code: `preempt(P${tid}); // Quantum Expired`, explanation: `Time Quantum exceeded. Context saved for P${tid} and moved to back of queue.` }])
       }
     }
 
@@ -387,6 +397,9 @@ export const ProcessManagement = () => {
         </div>
       </div>
       
+      {/* Live Code Tracer */}
+      {isRunning && <LiveCodeTracer logs={logs} />}
+
       <AlgorithmDeepDive algorithm={algorithm} />
     </div>
   )

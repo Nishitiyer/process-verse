@@ -18,6 +18,7 @@ import {
   checkSafeState 
 } from '../logic/deadlockSim'
 import { AlgorithmDeepDive } from '../components/AlgorithmDeepDive'
+import { LiveCodeTracer, TraceLog } from '../components/LiveCodeTracer'
 
 export const DeadlockSimulator = () => {
   const [resources, setResources] = useState<Resource[]>([
@@ -36,6 +37,7 @@ export const DeadlockSimulator = () => {
 
   const [safeState, setSafeState] = useState<{ safe: boolean, sequence: number[], starved?: number[] } | null>(null)
   const [isSimulating, setIsSimulating] = useState(false)
+  const [logs, setLogs] = useState<TraceLog[]>([])
   
   const [showAddForm, setShowAddForm] = useState(false)
   const [newAlloc, setNewAlloc] = useState([0, 0, 0])
@@ -96,6 +98,38 @@ export const DeadlockSimulator = () => {
   const runBanker = () => {
     const available = resources.map(r => r.available)
     const result = checkSafeState(processes, available)
+    
+    // Generate TraceLogs dynamically based on the checkSafeState result
+    let dynamicLogs: TraceLog[] = []
+    dynamicLogs.push({ id: Date.now().toString() + "-init", timestamp: new Date().toISOString().split('T')[1].slice(0, 11), code: `verify_safety_state(processes, available);`, explanation: `Banker's Algorithm instantiated to strictly verify Mutual Exclusion constraints.` })
+    
+    const baseWaitMs = 600
+    
+    if (result.safe) {
+       result.sequence.forEach((pid, i) => {
+         const p = processes.find(px => px.id === pid)
+         dynamicLogs.push({ id: Date.now().toString() + "-" + i, timestamp: new Date().toISOString().split('T')[1].slice(0, 11), code: `if (Need[${p?.need.join(',')}] <= Available) { Execute(P${pid}); }`, explanation: `Process ${pid} resource requirement satisfied. Matrix allocated and safely returned to pool.` })
+       })
+       dynamicLogs.push({ id: Date.now().toString() + "-end", timestamp: new Date().toISOString().split('T')[1].slice(0, 11), code: `return SAFE_SEQUENCE;`, explanation: `Hardware allocation graph mathematically proven secure.` })
+    } else {
+       result.sequence.forEach((pid, i) => {
+         const p = processes.find(px => px.id === pid)
+         dynamicLogs.push({ id: Date.now().toString() + "-seq-" + i, timestamp: new Date().toISOString().split('T')[1].slice(0, 11), code: `if (Need[${p?.need.join(',')}] <= Available) { Execute(P${pid}); }`, explanation: `Process ${pid} requirement locally satisfied and temporarily advanced.` })
+       })
+       result.starved?.forEach((pid, i) => {
+         const p = processes.find(px => px.id === pid)
+         dynamicLogs.push({ id: Date.now().toString() + "-st-" + i, timestamp: new Date().toISOString().split('T')[1].slice(0, 11), code: `if (Need[${p?.need.join(',')}] > Available) { Block(P${pid}); }`, explanation: `Process ${pid} physically cannot execute. Need completely surpasses Available system pool.` })
+       })
+       dynamicLogs.push({ id: Date.now().toString() + "-fail", timestamp: new Date().toISOString().split('T')[1].slice(0, 11), code: `return DEADLOCK_DETECTED; // Circular Wait Verified`, explanation: `Mathematical Circular Wait condition permanently proven. System halting.` })
+    }
+    
+    setLogs([])
+    dynamicLogs.forEach((log, index) => {
+       setTimeout(() => {
+          setLogs(prev => [...prev, log])
+       }, index * baseWaitMs)
+    })
+    
     setSafeState(result)
     setIsSimulating(true)
   }
@@ -103,6 +137,7 @@ export const DeadlockSimulator = () => {
   const resetBanker = () => {
     setSafeState(null)
     setIsSimulating(false)
+    setLogs([])
   }
 
   const loadSafeScenario = () => {
@@ -425,6 +460,9 @@ export const DeadlockSimulator = () => {
               </motion.div>
             )}
           </AnimatePresence>
+
+          {/* Live Tracer Component */}
+          {isSimulating && <LiveCodeTracer logs={logs} />}
         </div>
       </div>
       

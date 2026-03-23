@@ -12,6 +12,7 @@ import {
   ShieldCheck
 } from 'lucide-react'
 import { AlgorithmDeepDive } from '../components/AlgorithmDeepDive'
+import { LiveCodeTracer, TraceLog } from '../components/LiveCodeTracer'
 
 const THREAD_COLORS = ['#00f3ff', '#9d00ff', '#ff004c', '#00ff8a', '#ff8a00']
 
@@ -30,6 +31,7 @@ export const ThreadManagement = () => {
   ])
   const [isRunning, setIsRunning] = useState(false)
   const [cpuUsage, setCpuUsage] = useState(0)
+  const [logs, setLogs] = useState<TraceLog[]>([])
   const timerRef = useRef<any>(null)
 
   useEffect(() => {
@@ -38,17 +40,25 @@ export const ThreadManagement = () => {
         setThreads(prev => {
           const next = prev.map(t => ({ ...t }))
           const runningIdx = next.findIndex(t => t.state === 'running')
+          let newLog: TraceLog | null = null
           
           if (runningIdx === -1) {
             const readyIdx = next.findIndex(t => t.state === 'ready')
-            if (readyIdx !== -1) next[readyIdx].state = 'running'
+            if (readyIdx !== -1) {
+              next[readyIdx].state = 'running'
+              newLog = { id: Date.now().toString() + "-run", timestamp: new Date().toISOString().split('T')[1].slice(0, 11), code: `pthread_mutex_lock(&cpu_lock); // Dispatching T${next[readyIdx].id}`, explanation: `Thread ${next[readyIdx].id} acquired the CPU Mutex and entered the Running state.` }
+            }
           } else {
             next[runningIdx].progress += 5
             if (next[runningIdx].progress >= 100) {
+              const tid = next[runningIdx].id
               next[runningIdx].state = 'terminated'
               next[runningIdx].progress = 100
+              newLog = { id: Date.now().toString() + "-term", timestamp: new Date().toISOString().split('T')[1].slice(0, 11), code: `pthread_exit(NULL); // Releasing CPU Mutex`, explanation: `Thread ${tid} completed execution and released resources.` }
             }
           }
+
+          if (newLog) setLogs(prevLogs => [...prevLogs.slice(-20), newLog!])
           return next
         })
         setCpuUsage(Math.floor(Math.random() * 30) + 40)
@@ -84,6 +94,7 @@ export const ThreadManagement = () => {
 
   const resetThreads = () => {
     setIsRunning(false)
+    setLogs([])
     setThreads([
       { id: 1, state: 'ready', priority: 1, color: THREAD_COLORS[0], progress: 0 },
       { id: 2, state: 'ready', priority: 0, color: THREAD_COLORS[1], progress: 0 },
@@ -245,6 +256,9 @@ export const ThreadManagement = () => {
                 </AnimatePresence>
                 {threads.length === 0 && <div className="p-20 text-center text-slate-800 italic uppercase font-black tracking-widest text-2xl opacity-20">No_Threads_Active</div>}
               </div>
+              
+              {/* Live Code Tracer */}
+              {isRunning && <LiveCodeTracer logs={logs} />}
            </div>
         </div>
       </div>

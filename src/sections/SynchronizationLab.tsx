@@ -15,6 +15,7 @@ import {
   Layers
 } from 'lucide-react'
 import { AlgorithmDeepDive, OSAlgorithm } from '../components/AlgorithmDeepDive'
+import { LiveCodeTracer, TraceLog } from '../components/LiveCodeTracer'
 
 type PhilosopherStatus = 'thinking' | 'hungry' | 'eating'
 
@@ -38,6 +39,7 @@ export const SynchronizationLab = () => {
   ])
   const [forks, setForks] = useState<boolean[]>([true, true, true, true, true]) // true = available
   const [isRunning, setIsRunning] = useState(false)
+  const [logs, setLogs] = useState<TraceLog[]>([])
   const timerRef = useRef<any>(null)
 
   useEffect(() => {
@@ -67,20 +69,28 @@ export const SynchronizationLab = () => {
     const nextForks = [...forks]
     const randomIdx = Math.floor(Math.random() * 5)
     const p = nextPhils[randomIdx]
+    let newLog: TraceLog | null = null
 
     if (p.status === 'thinking') {
       p.status = 'hungry'
+      newLog = { id: Date.now().toString() + Math.random(), timestamp: new Date().toISOString().split('T')[1].slice(0, 11), code: `wait(fork[${p.leftFork}]); wait(fork[${p.rightFork}]);`, explanation: `Philosopher ${p.id} became HUNGRY and is requesting Mutex locks.` }
     } else if (p.status === 'hungry') {
       if (nextForks[p.leftFork] && nextForks[p.rightFork]) {
         nextForks[p.leftFork] = false
         nextForks[p.rightFork] = false
         p.status = 'eating'
+        newLog = { id: Date.now().toString() + Math.random(), timestamp: new Date().toISOString().split('T')[1].slice(0, 11), code: `mutex_lock(fork[${p.leftFork}]); mutex_lock(fork[${p.rightFork}]); // CS_ENTER`, explanation: `Philosopher ${p.id} successfully acquired both Mutexes and entered the Critical Section.` }
+      } else {
+        newLog = { id: Date.now().toString() + Math.random(), timestamp: new Date().toISOString().split('T')[1].slice(0, 11), code: `// Blocked: Mutexes currently unavailable`, explanation: `Philosopher ${p.id} is blocked waiting for surrounding nodes to release locks.` }
       }
     } else if (p.status === 'eating') {
       nextForks[p.leftFork] = true
       nextForks[p.rightFork] = true
       p.status = 'thinking'
+      newLog = { id: Date.now().toString() + Math.random(), timestamp: new Date().toISOString().split('T')[1].slice(0, 11), code: `signal(fork[${p.leftFork}]); signal(fork[${p.rightFork}]); // CS_EXIT`, explanation: `Philosopher ${p.id} completed execution and triggered signal() to release both Mutexes.` }
     }
+
+    if (newLog) setLogs(prev => [...prev.slice(-20), newLog!])
 
     setPhilosophers(nextPhils)
     setForks(nextForks)
@@ -245,6 +255,9 @@ export const SynchronizationLab = () => {
                {/* Background Decorators */}
                <div className="absolute inset-0 -z-10 opacity-20 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle at 50% 50%, rgba(0, 243, 255, 0.05) 0%, transparent 70%)' }} />
             </div>
+            
+            {/* Live Tracer Component */}
+            {activeLab === 'philosophers' && <LiveCodeTracer logs={logs} />}
          </div>
       </div>
       
