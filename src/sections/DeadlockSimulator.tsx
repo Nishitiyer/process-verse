@@ -82,7 +82,7 @@ export const DeadlockSimulator = () => {
   }
 
   useEffect(() => {
-    const handlePlay = () => setIsSimulating(r => !r)
+    const handlePlay = () => runBanker()
     const handleReset = () => resetBanker()
     window.addEventListener('GLOBAL_PLAY_TOGGLE', handlePlay)
     window.addEventListener('GLOBAL_RESET', handleReset)
@@ -90,7 +90,7 @@ export const DeadlockSimulator = () => {
       window.removeEventListener('GLOBAL_PLAY_TOGGLE', handlePlay)
       window.removeEventListener('GLOBAL_RESET', handleReset)
     }
-  }, [])
+  }, [processes, resources])
   
   const runBanker = () => {
     const available = resources.map(r => r.available)

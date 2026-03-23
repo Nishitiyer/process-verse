@@ -62,7 +62,7 @@ export const SynchronizationLab = () => {
   }, [isRunning, philosophers, forks])
 
   const simulateStep = () => {
-    const nextPhils = [...philosophers]
+    const nextPhils = philosophers.map(p => ({ ...p }))
     const nextForks = [...forks]
     const randomIdx = Math.floor(Math.random() * 5)
     const p = nextPhils[randomIdx]

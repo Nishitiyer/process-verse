@@ -35,7 +35,7 @@ export const ThreadManagement = () => {
     if (isRunning) {
       timerRef.current = setInterval(() => {
         setThreads(prev => {
-          const next = [...prev]
+          const next = prev.map(t => ({ ...t }))
           const runningIdx = next.findIndex(t => t.state === 'running')
           
           if (runningIdx === -1) {
