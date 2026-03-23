@@ -22,12 +22,14 @@ export const ProcessManagement = () => {
   const [runningProcess, setRunningProcess] = useState<Process | null>(null)
   const [readyQueue, setReadyQueue] = useState<Process[]>([])
   const [ganttData, setGanttData] = useState<{pid: number, start: number, end: number, color: string}[]>([])
+  const [algorithm, setAlgorithm] = useState<'FCFS'|'SJF'|'Priority'|'RR'>('FCFS')
   const [quantum] = useState(2)
   const [timeStep] = useState(500) // ms per tick
 
   const [isRunning, setIsRunning] = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
   const timerRef = useRef<any>(null)
+  const quantumRef = useRef(0)
 
   useEffect(() => {
     if (isRunning) {
@@ -38,7 +40,7 @@ export const ProcessManagement = () => {
       clearInterval(timerRef.current)
     }
     return () => clearInterval(timerRef.current)
-  }, [isRunning, processes, runningProcess, readyQueue, currentTime])
+  }, [isRunning, processes, runningProcess, readyQueue, currentTime, algorithm])
 
   const tick = () => {
     setCurrentTime(prev => prev + 1)
@@ -59,10 +61,11 @@ export const ProcessManagement = () => {
 
     // 2. If no process is running, pick one from ready queue
     if (!updatedRunningProcess && updatedReadyQueue.length > 0) {
-      updatedRunningProcess = getNextProcess(updatedReadyQueue, 'FCFS')
+      updatedRunningProcess = getNextProcess(updatedReadyQueue, algorithm)
       if (updatedRunningProcess) {
         updatedReadyQueue = updatedReadyQueue.filter(p => p.id !== updatedRunningProcess!.id)
         updatedRunningProcess.state = 'running'
+        quantumRef.current = 0
         
         updatedGantt.push({
           pid: updatedRunningProcess.id,
@@ -75,11 +78,19 @@ export const ProcessManagement = () => {
       // 3. Process is running
       updatedRunningProcess.burstTime -= 1
       updatedGantt[updatedGantt.length - 1].end = currentTime + 1
+      quantumRef.current += 1
 
       if (updatedRunningProcess.burstTime <= 0) {
         updatedRunningProcess.state = 'terminated'
         updatedRunningProcess.turnaroundTime = (currentTime + 1) - updatedRunningProcess.arrivalTime
         updatedRunningProcess = null
+        quantumRef.current = 0
+      } else if (algorithm === 'RR' && quantumRef.current >= quantum) {
+        // Preempt for Round Robin
+        updatedRunningProcess.state = 'ready'
+        updatedReadyQueue.push(updatedRunningProcess)
+        updatedRunningProcess = null
+        quantumRef.current = 0
       }
     }
 
@@ -89,9 +100,33 @@ export const ProcessManagement = () => {
     setGanttData(updatedGantt)
   }
 
+  const addNewProcess = () => {
+    const newId = processes.length + 1
+    const p: Process = {
+      id: newId,
+      name: `Task-${newId}`,
+      arrivalTime: Math.max(0, currentTime + Math.floor(Math.random() * 3)),
+      burstTime: Math.floor(Math.random() * 5) + 2,
+      remainingTime: 0,
+      priority: Math.floor(Math.random() * 3),
+      state: 'new',
+      color: ['#00f3ff', '#9d00ff', '#ff004c', '#00ff8a', '#ff8a00'][newId % 5],
+      waitingTime: 0, turnaroundTime: 0
+    }
+    p.remainingTime = p.burstTime
+    setProcesses([...processes, p])
+  }
+
+  const cycleAlgorithm = () => {
+    const algos: ('FCFS'|'SJF'|'Priority'|'RR')[] = ['FCFS', 'SJF', 'Priority', 'RR']
+    const nextIdx = (algos.indexOf(algorithm) + 1) % algos.length
+    setAlgorithm(algos[nextIdx])
+  }
+
   const resetSim = () => {
     setIsRunning(false)
     setCurrentTime(0)
+    quantumRef.current = 0
     setProcesses([
       { id: 1, name: 'Browser', arrivalTime: 0, burstTime: 6, remainingTime: 6, priority: 1, state: 'new', color: '#00f3ff', waitingTime: 0, turnaroundTime: 0 },
       { id: 2, name: 'System', arrivalTime: 2, burstTime: 4, remainingTime: 4, priority: 0, state: 'new', color: '#9d00ff', waitingTime: 0, turnaroundTime: 0 },
@@ -146,7 +181,7 @@ export const ProcessManagement = () => {
               <h3 className="text-sm font-black uppercase tracking-[0.2em] text-slate-500 border-b border-white/5 pb-4">Control Unit</h3>
               
               <div className="space-y-4">
-                 <button className="w-full sidebar-item border border-white/5 hover:border-primary/30 group">
+                 <button onClick={addNewProcess} className="w-full sidebar-item border border-white/5 hover:border-primary/30 group">
                     <Plus size={20} className="text-primary" />
                     <span className="font-bold text-sm">Add New Process</span>
                  </button>
@@ -154,7 +189,9 @@ export const ProcessManagement = () => {
                  <div className="p-6 rounded-3xl bg-black/40 border border-white/5 space-y-4">
                     <div className="flex justify-between items-center text-[10px] uppercase font-bold text-slate-500 tracking-widest">
                        <span>Algorithm</span>
-                       <span className="text-primary font-mono bg-primary/10 px-2 py-0.5 rounded">FCFS</span>
+                       <button onClick={cycleAlgorithm} className="text-primary font-mono bg-primary/10 px-3 py-1.5 rounded hover:bg-primary/20 transition-colors cursor-pointer">
+                          {algorithm}
+                       </button>
                     </div>
                     <div className="flex justify-between items-center text-[10px] uppercase font-bold text-slate-500 tracking-widest">
                        <span>Time Quantum</span>
