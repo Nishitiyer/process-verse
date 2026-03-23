@@ -105,6 +105,40 @@ export const DeadlockSimulator = () => {
     setIsSimulating(false)
   }
 
+  const loadSafeScenario = () => {
+    resetBanker()
+    const safeResources: Resource[] = [
+      { id: '0', name: 'CPU', total: 10, available: 3, color: '#00f3ff' },
+      { id: '1', name: 'Memory', total: 5, available: 3, color: '#9d00ff' },
+      { id: '2', name: 'Disk', total: 7, available: 2, color: '#ff004c' },
+    ]
+    const safeProcesses: DeadlockProcess[] = [
+      { id: 0, name: 'P0', color: '#00f3ff', allocation: [0, 1, 0], max: [7, 5, 3], need: [7, 4, 3] },
+      { id: 1, name: 'P1', color: '#9d00ff', allocation: [2, 0, 0], max: [3, 2, 2], need: [1, 2, 2] },
+      { id: 2, name: 'P2', color: '#ff004c', allocation: [3, 0, 2], max: [9, 0, 2], need: [6, 0, 0] },
+      { id: 3, name: 'P3', color: '#00ff8a', allocation: [2, 1, 1], max: [2, 2, 2], need: [0, 1, 1] },
+      { id: 4, name: 'P4', color: '#ff8a00', allocation: [0, 0, 2], max: [4, 3, 3], need: [4, 3, 1] }
+    ]
+    setResources(safeResources)
+    setProcesses(safeProcesses)
+  }
+
+  const loadDeadlockScenario = () => {
+    resetBanker()
+    const deadlockResources: Resource[] = [
+      { id: '0', name: 'CPU', total: 10, available: 0, color: '#00f3ff' },
+      { id: '1', name: 'Memory', total: 5, available: 1, color: '#9d00ff' },
+      { id: '2', name: 'Disk', total: 7, available: 1, color: '#ff004c' },
+    ]
+    const deadlockProcesses: DeadlockProcess[] = [
+      { id: 0, name: 'P0', color: '#00f3ff', allocation: [4, 2, 3], max: [6, 4, 4], need: [2, 2, 1] },
+      { id: 1, name: 'P1', color: '#ff004c', allocation: [4, 1, 1], max: [8, 2, 2], need: [4, 1, 1] },
+      { id: 2, name: 'P2', color: '#ff8a00', allocation: [2, 1, 2], max: [3, 2, 3], need: [1, 1, 1] },
+    ]
+    setResources(deadlockResources)
+    setProcesses(deadlockProcesses)
+  }
+
   return (
     <div className="p-12 space-y-12 max-w-7xl mx-auto">
       {/* Header Section */}
@@ -115,10 +149,17 @@ export const DeadlockSimulator = () => {
           </div>
           <div>
             <h1 className="text-4xl font-black italic uppercase tracking-tighter mb-2">Deadlock Shield</h1>
-            <p className="text-slate-500 font-mono text-[10px] uppercase tracking-widest flex items-center gap-2">
-              <ShieldAlert size={12} className="text-accent" /> 
-              Avoidance Protocol: Banker's v2.1
-            </p>
+            <div className="flex items-center gap-4">
+               <span className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] flex items-center gap-2">
+                 <ShieldAlert size={12} className="text-accent" /> 
+                 Banker's Protocol: Armed
+               </span>
+               <div className="h-1 w-1 rounded-full bg-slate-700" />
+               <div className="flex gap-2">
+                 <button onClick={loadSafeScenario} className="text-[10px] font-bold text-cyan-400 uppercase tracking-widest px-3 py-1 bg-cyan-500/10 rounded-lg hover:bg-cyan-500/20 active:scale-95 transition-all outline outline-1 outline-cyan-500/30">Safe Set</button>
+                 <button onClick={loadDeadlockScenario} className="text-[10px] font-bold text-red-500 uppercase tracking-widest px-3 py-1 bg-red-500/10 rounded-lg hover:bg-red-500/20 active:scale-95 transition-all outline outline-1 outline-red-500/30">Deadlock Set</button>
+               </div>
+            </div>
           </div>
         </div>
 

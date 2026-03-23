@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Code2, BookOpen, Terminal, ChevronRight, Binary, Calculator } from 'lucide-react'
 
-export type OSAlgorithm = 'FCFS' | 'SJF' | 'Priority' | 'RR' | 'Banker' | 'philosophers' | 'producer-consumer' | 'readers-writers'
+export type OSAlgorithm = 'FCFS' | 'SJF' | 'Priority' | 'RR' | 'Banker' | 'philosophers' | 'producer-consumer' | 'readers-writers' | 'Threads'
 
 interface AlgorithmDeepDiveProps {
   algorithm: OSAlgorithm
@@ -539,8 +539,73 @@ int main() {
     
     return 0;
 }`
+  },
+  Threads: {
+    title: "Multi-Threading & Concurrency",
+    description: "Demonstrates concurrent execution within a single process. Multiple threads operate over the same shared memory space, necessitating strict synchronization techniques like Mutex locks to prevent mathematical Race Conditions while operating inside a Critical Section.",
+    formulas: [
+      "Context Overhead: Thread Switch << Process Switch",
+      "Critical Section: Shared memory block actively undergoing mutation",
+      "Mutex Lock: Engaged globally to prevent simultaneous writes"
+    ],
+    code: `// Multi-threading with POSIX and Mutex
+#include <stdio.h>
+#include <pthread.h>
+#include <unistd.h>
+
+#define NUM_THREADS 3
+
+// Shared memory resource
+long shared_counter = 0;
+pthread_mutex_t counter_mutex;
+
+void* thread_work(void* arg) {
+    long thread_id = (long)arg;
+    
+    printf("Thread %ld launched.\\n", thread_id);
+    
+    // Critical Section: Modifying shared memory
+    for(int i = 0; i < 5; i++) {
+        pthread_mutex_lock(&counter_mutex);
+        
+        long local_copy = shared_counter;
+        local_copy++;
+        
+        // Simulating processing delay to force race condition if unlocked
+        usleep(100000); 
+        
+        shared_counter = local_copy;
+        printf("Thread %ld incremented counter to: %ld\\n", thread_id, shared_counter);
+        
+        pthread_mutex_unlock(&counter_mutex);
+    }
+    
+    printf("Thread %ld completed.\\n", thread_id);
+    pthread_exit(NULL);
+}
+
+int main() {
+    pthread_t threads[NUM_THREADS];
+    pthread_mutex_init(&counter_mutex, NULL);
+    
+    // Dispatch threads concurrently
+    for(long t = 0; t < NUM_THREADS; t++) {
+        printf("Dispatching Thread %ld...\\n", t);
+        pthread_create(&threads[t], NULL, thread_work, (void*)t);
+    }
+    
+    // Await thread completion gracefully
+    for(long t = 0; t < NUM_THREADS; t++) {
+        pthread_join(threads[t], NULL);
+    }
+    
+    printf("\\nFinal Shared Counter Value: %ld\\n", shared_counter);
+    pthread_mutex_destroy(&counter_mutex);
+    return 0;
+}`
   }
 }
+
 
 export const AlgorithmDeepDive = ({ algorithm }: AlgorithmDeepDiveProps) => {
   const [activeTab, setActiveTab] = useState<'theory' | 'code'>('theory')

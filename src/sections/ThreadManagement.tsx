@@ -11,6 +11,7 @@ import {
   Activity,
   ShieldCheck
 } from 'lucide-react'
+import { AlgorithmDeepDive } from '../components/AlgorithmDeepDive'
 
 const THREAD_COLORS = ['#00f3ff', '#9d00ff', '#ff004c', '#00ff8a', '#ff8a00']
 
@@ -247,6 +248,8 @@ export const ThreadManagement = () => {
            </div>
         </div>
       </div>
+      
+      <AlgorithmDeepDive algorithm="Threads" />
     </div>
   )
 }
