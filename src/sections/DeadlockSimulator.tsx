@@ -19,13 +19,13 @@ import {
 } from '../logic/deadlockSim'
 
 export const DeadlockSimulator = () => {
-  const [resources] = useState<Resource[]>([
+  const [resources, setResources] = useState<Resource[]>([
     { id: '1', name: 'CPU', total: 10, available: 3, color: '#00f3ff' },
     { id: '2', name: 'Memory', total: 5, available: 3, color: '#9d00ff' },
     { id: '3', name: 'Disk', total: 7, available: 2, color: '#ff004c' },
   ])
 
-  const [processes] = useState<DeadlockProcess[]>([
+  const [processes, setProcesses] = useState<DeadlockProcess[]>([
     { id: 1, name: 'P1', allocation: [0, 1, 0], max: [7, 5, 3], need: [7, 4, 3], color: '#00f3ff' },
     { id: 2, name: 'P2', allocation: [2, 0, 0], max: [3, 2, 2], need: [1, 2, 2], color: '#9d00ff' },
     { id: 3, name: 'P3', allocation: [3, 0, 2], max: [9, 0, 2], need: [6, 0, 0], color: '#ff004c' },
@@ -35,6 +35,51 @@ export const DeadlockSimulator = () => {
 
   const [safeState, setSafeState] = useState<{ safe: boolean, sequence: number[] } | null>(null)
   const [isSimulating, setIsSimulating] = useState(false)
+  
+  const [showAddForm, setShowAddForm] = useState(false)
+  const [newAlloc, setNewAlloc] = useState([0, 0, 0])
+  const [newMax, setNewMax] = useState([0, 0, 0])
+
+  const updateNewAlloc = (idx: number, val: number) => {
+     const next = [...newAlloc]; next[idx] = Math.max(0, val); setNewAlloc(next)
+  }
+  const updateNewMax = (idx: number, val: number) => {
+     const next = [...newMax]; next[idx] = Math.max(0, val); setNewMax(next)
+  }
+
+  const handleAddProcess = () => {
+     for (let i = 0; i < 3; i++) {
+        if (newAlloc[i] > newMax[i]) {
+            alert("Allocation cannot exceed Max claim for any resource.")
+            return;
+        }
+        if (newAlloc[i] > resources[i].available) {
+            alert(`Not enough ${resources[i].name} available!`)
+            return;
+        }
+     }
+     
+     const updatedRes = [...resources]
+     for (let i = 0; i < 3; i++) {
+        updatedRes[i].available -= newAlloc[i]
+     }
+
+     const newId = processes.length + 1
+     const p: DeadlockProcess = {
+        id: newId,
+        name: `P${newId}`,
+        allocation: [...newAlloc],
+        max: [...newMax],
+        need: newMax.map((m, i) => m - newAlloc[i]),
+        color: ['#00f3ff', '#9d00ff', '#ff004c', '#00ff8a', '#ff8a00'][newId % 5]
+     }
+     
+     setResources(updatedRes)
+     setProcesses([...processes, p])
+     setShowAddForm(false)
+     setNewAlloc([0,0,0])
+     setNewMax([0,0,0])
+  }
 
   useEffect(() => {
     const handlePlay = () => setIsSimulating(r => !r)
@@ -143,8 +188,61 @@ export const DeadlockSimulator = () => {
                  <Zap size={18} className="text-secondary" />
                  Allocation Matrix
                </h3>
-               <span className="mono text-[10px] text-slate-600">SNAPSHOT_ID: 0x88AF</span>
+               <div className="flex items-center gap-4">
+                 <button onClick={() => setShowAddForm(!showAddForm)} className="text-xs font-bold text-slate-400 bg-white/5 px-4 py-2 hover:bg-white/10 hover:text-white rounded-xl transition-all border border-white/5">
+                   {showAddForm ? 'CANCEL' : '+ ADD CUSTOM PROCESS'}
+                 </button>
+                 <span className="mono text-[10px] text-slate-600 hidden md:inline">SNAPSHOT_ID: 0x88AF</span>
+               </div>
             </div>
+
+            <AnimatePresence>
+              {showAddForm && (
+                <motion.div 
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  className="overflow-hidden mb-8"
+                >
+                  <div className="p-6 rounded-3xl bg-black/40 border border-white/10 space-y-6 shadow-inner shadow-black/50">
+                    <h4 className="text-[10px] text-slate-500 font-bold uppercase tracking-widest flex items-center gap-2">
+                       <Database size={12} /> Inject New Process
+                    </h4>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                       <div className="space-y-4">
+                         <span className="text-[10px] font-bold text-accent tracking-widest uppercase">Current Allocation Input</span>
+                         <div className="flex items-center gap-4">
+                           {['CPU','Memory','Disk'].map((label, i) => (
+                             <div key={`alloc-${i}`} className="flex flex-col gap-1 items-center">
+                               <span className="text-[8px] text-slate-500 uppercase font-bold">{label}</span>
+                               <input type="number" min={0} value={newAlloc[i]} onChange={(e) => updateNewAlloc(i, parseInt(e.target.value) || 0)} className="w-12 h-10 bg-slate-900 border border-white/10 rounded-xl text-center text-xs font-mono text-slate-300 focus:outline-none focus:border-accent/40" />
+                             </div>
+                           ))}
+                         </div>
+                       </div>
+                       <div className="space-y-4">
+                         <span className="text-[10px] font-bold text-slate-400 tracking-widest uppercase">Maximum Need Claim</span>
+                         <div className="flex items-center gap-4">
+                           {['CPU','Memory','Disk'].map((label, i) => (
+                             <div key={`max-${i}`} className="flex flex-col gap-1 items-center">
+                               <span className="text-[8px] text-slate-500 uppercase font-bold">{label}</span>
+                               <input type="number" min={0} value={newMax[i]} onChange={(e) => updateNewMax(i, parseInt(e.target.value) || 0)} className="w-12 h-10 bg-white/5 border border-white/10 rounded-xl text-center text-xs font-mono text-slate-300 focus:outline-none focus:border-white/30" />
+                             </div>
+                           ))}
+                         </div>
+                       </div>
+                    </div>
+
+                    <div className="pt-2">
+                      <button onClick={handleAddProcess} className="w-full py-3 rounded-xl bg-accent/20 text-accent text-xs font-black uppercase tracking-widest hover:bg-accent hover:text-black transition-all shadow-[0_0_15px_rgba(255,0,76,0.1)] hover:shadow-[0_0_20px_rgba(255,0,76,0.4)]">
+                        + Initialize Entity
+                      </button>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             <div className="overflow-x-auto custom-scrollbar">
               <table className="w-full text-left border-separate border-spacing-y-4">

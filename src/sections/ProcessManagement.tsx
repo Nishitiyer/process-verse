@@ -236,9 +236,13 @@ export const ProcessManagement = () => {
                  <div className="p-6 rounded-3xl bg-black/40 border border-white/5 space-y-4">
                     <div className="flex justify-between items-center text-[10px] uppercase font-bold text-slate-500 tracking-widest">
                        <span>Algorithm</span>
-                       <button onClick={cycleAlgorithm} className="text-primary font-mono bg-primary/10 px-3 py-1.5 rounded hover:bg-primary/20 transition-colors cursor-pointer">
-                          {algorithm}
-                       </button>
+                       <div className="flex items-center gap-3">
+                         {algorithm === 'SJF' && <span className="text-[8px] text-primary/70">Shortest Burst First</span>}
+                         {algorithm === 'Priority' && <span className="text-[8px] text-accent/70">Lowest Priority ID First</span>}
+                         <button onClick={cycleAlgorithm} className="text-primary font-mono bg-primary/10 px-3 py-1.5 rounded hover:bg-primary/20 transition-colors cursor-pointer">
+                            {algorithm}
+                         </button>
+                       </div>
                     </div>
                     <div className="flex justify-between items-center text-[10px] uppercase font-bold text-slate-500 tracking-widest">
                        <span>Time Quantum</span>
