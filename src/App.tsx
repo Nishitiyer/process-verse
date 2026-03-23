@@ -56,7 +56,7 @@ function App() {
             <button
               key={item.id}
               onClick={() => setActiveSection(item.id)}
-              className={`sidebar-item ${
+              className={`sidebar-item group ${
                 activeSection === item.id 
                 ? 'sidebar-item-active' 
                 : 'text-slate-500 hover:text-slate-100 hover:bg-white/[0.03]'
