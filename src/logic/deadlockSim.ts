@@ -18,12 +18,15 @@ export interface DeadlockProcess {
 export const checkSafeState = (
   processes: DeadlockProcess[],
   available: number[]
-): { safe: boolean; sequence: number[] } => {
+): { safe: boolean; sequence: number[]; starved: number[] } => {
   let work = [...available];
   let finish = new Array(processes.length).fill(false);
   let safeSequence: number[] = [];
 
-  for (let k = 0; k < processes.length; k++) {
+  // Repeatedly try to find a process that can finish
+  let progress = true;
+  while (progress) {
+    progress = false;
     for (let i = 0; i < processes.length; i++) {
       if (!finish[i]) {
         let canAllocate = true;
@@ -40,13 +43,23 @@ export const checkSafeState = (
           }
           finish[i] = true;
           safeSequence.push(processes[i].id);
+          progress = true; // We made progress, check everything again
         }
       }
     }
   }
 
+  // Any process where finish[i] is false is starved
+  let starved: number[] = [];
+  for (let i = 0; i < processes.length; i++) {
+    if (!finish[i]) {
+      starved.push(processes[i].id);
+    }
+  }
+
   return {
     safe: finish.every(f => f),
-    sequence: safeSequence
+    sequence: safeSequence,
+    starved
   };
 };

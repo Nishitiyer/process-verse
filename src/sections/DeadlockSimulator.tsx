@@ -34,7 +34,7 @@ export const DeadlockSimulator = () => {
     { id: 5, name: 'P5', allocation: [0, 0, 2], max: [4, 3, 3], need: [4, 3, 1], color: '#ff8a00' },
   ])
 
-  const [safeState, setSafeState] = useState<{ safe: boolean, sequence: number[] } | null>(null)
+  const [safeState, setSafeState] = useState<{ safe: boolean, sequence: number[], starved?: number[] } | null>(null)
   const [isSimulating, setIsSimulating] = useState(false)
   
   const [showAddForm, setShowAddForm] = useState(false)
@@ -391,6 +391,31 @@ export const DeadlockSimulator = () => {
                           {idx < safeState.sequence.length - 1 && <ChevronRight size={20} className="text-slate-700 animate-pulse" />}
                         </Fragment>
                       ))}
+                    </div>
+                  )}
+
+                  {!safeState.safe && safeState.starved && (
+                    <div className="mt-8">
+                      <div className="p-6 rounded-[2rem] bg-red-500/10 border border-red-500/20">
+                        <h4 className="text-red-400 font-bold uppercase tracking-widest text-[10px] mb-4 flex items-center gap-2">
+                           <ShieldAlert size={14} /> Diagnostic: Circular Wait Identified
+                        </h4>
+                        <div className="flex flex-wrap gap-3">
+                          {safeState.starved.map(pid => {
+                             const p = processes.find(p => p.id === pid)
+                             return p ? (
+                               <div key={pid} className="px-4 py-2 rounded-xl bg-red-500/20 text-red-300 text-xs font-mono border border-red-500/30">
+                                 <span className="font-bold text-white pr-2">{p.name} Blocked:</span> Needs [{p.need.join(', ')}]
+                               </div>
+                             ) : null
+                          })}
+                        </div>
+                        <div className="mt-4 p-4 rounded-xl bg-black/40 border border-red-500/10">
+                           <p className="text-[11px] text-red-300/80 font-medium leading-relaxed">
+                             <span className="text-red-400 font-bold">MATHEMATICAL FAILURE:</span> The system physically only holds <span className="text-white font-mono bg-red-500/20 px-1 rounded">[{resources.map(r => r.available).join(', ')}]</span> in its Available pool. Because NO remaining process's Need array can be wholly satisfied by this Available pool, no execution step can be taken to release holding blocks. This mathematically guarantees an unresolvable Circular Wait.
+                           </p>
+                        </div>
+                      </div>
                     </div>
                   )}
                 </div>

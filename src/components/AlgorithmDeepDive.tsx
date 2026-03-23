@@ -11,6 +11,8 @@ interface AlgorithmDeepDiveProps {
 type TheoryData = {
   title: string
   description: string
+  concept_why: string
+  concept_how: string
   formulas: string[]
   code: string
 }
@@ -19,6 +21,8 @@ const THEORY_DICT: Record<OSAlgorithm, TheoryData> = {
   FCFS: {
     title: 'First-Come, First-Served (FCFS)',
     description: 'The simplest scheduling algorithm. Processes are dispatched according to their arrival time on the ready queue. Being a non-preemptive algorithm, once the CPU has been allocated to a process, that process keeps the CPU until it releases it, either by terminating or by requesting I/O.',
+    concept_why: "Used in simple batch systems where historical fairness (first to arrive is first served) is required without any overhead of monitoring burst times.",
+    concept_how: "Maintains a strict FIFO (First-In-First-Out) queue. The CPU is allocated to the head of the queue and executes non-preemptively until completion.",
     formulas: [
       'Completion Time (CT) = Time when process fully completes execution',
       'Turnaround Time (TAT) = Completion Time - Arrival Time',
@@ -78,6 +82,8 @@ int main() {
   SJF: {
     title: 'Shortest Job First (SJF)',
     description: 'A scheduling dispatch algorithm that selects the waiting process with the smallest execution (burst) time. SJF is proven to yield the absolute minimum average waiting time for a given set of processes. It can be preemptive (SRTF) or non-preemptive.',
+    concept_why: "Mathematically proven to yield the absolute minimum average waiting time universally for any given set of processes.",
+    concept_how: "The scheduler actively scans the Ready Queue and permanently allocates the CPU to the process holding the smallest remaining overall burst computation time.",
     formulas: [
       'Selection Criteria: Process with minimum Burst Time currently in Ready Queue',
       'Turnaround Time (TAT) = Completion Time - Arrival Time',
@@ -139,6 +145,8 @@ int main() {
   Priority: {
     title: 'Priority Scheduling',
     description: 'Each process is assigned a priority. The CPU is allocated to the process with the highest priority (often represented by the lowest integer value). If priorities are equal, FCFS rules apply. Preemptive priority scheduling can eject a running process if a higher priority one arrives.',
+    concept_why: "Crucial for operating systems enforcing strict hierarchical execution regimes (e.g. Kernel operations taking absolute precedence over user-space applications).",
+    concept_how: "Each process is assigned a static or dynamic priority integer natively. The CPU instantly dispatches the process with the highest mathematical priority regardless of sequential arrival fairness.",
     formulas: [
       'Selection Criteria: Min(Priority_Value) where 0 is highest priority',
       'Turnaround Time (TAT) = Completion Time - Arrival Time',
@@ -201,6 +209,8 @@ int main() {
   RR: {
     title: 'Round Robin (RR)',
     description: 'Designed highly for timesharing systems. It passes the CPU sequentially across all ready processes, where each process is granted execution time equal to a static Time Quantum. If a process burst exceeds the quantum, it is preempted and sent to the back of the ready queue.',
+    concept_why: "The modern standard for interactive time-sharing systems where user responsiveness is absolutely mandatory (e.g., Windows/Linux desktop GUIs).",
+    concept_how: "Enforces a Time Quantum limit. If a process exceeds this cyclic limit, a timer hardware interrupt fires, dynamically saving the process state context and shuffling it to the back of the queue (Preemption).",
     formulas: [
       'Preemption Interval = Time Quantum (TQ)',
       'Remaining Burst Time = Initial Burst - Executed TQ',
@@ -267,6 +277,8 @@ int main() {
   Banker: {
     title: "Banker's Algorithm",
     description: "A resource allocation and deadlock avoidance algorithm. It tests for safety by simulating the allocation of predetermined maximum possible amounts of all resources. It makes an 's-state' check to test for possible deadlock conditions for all other pending activities before deciding whether allocation should be allowed to continue.",
+    concept_why: "Prevents an operating system from entering a mathematically unresolvable Deadlock state by strictly refusing to grant resources if the allocation would lead to a Circular Wait trajectory.",
+    concept_how: "A tracker matrix calculates what System Resources exist versus what each Process claims it MIGHT need in the future. Prior to granting an asset, the OS simulates the allocation to verify if at least one safe execution sequence path remains logically possible.",
     formulas: [
       "Need Matrix = Max Matrix - Allocation Matrix",
       "Safety Check: If Need[i] <= Available, Execute Process",
@@ -359,6 +371,8 @@ int main() {
   philosophers: {
     title: "Dining Philosophers",
     description: "A classic synchronization problem illustrating issues with resource sharing. Five philosophers sit at a table doing one of two things: eating or thinking. While eating, they must hold both the fork on their left and the right. This inherently creates the potential for deadlock (if everyone grabs the left fork simultaneously).",
+    concept_why: "Serves as a rigorous theoretical stress-test modeling massive arrays of discrete threads actively seeking access to a highly limited pool of identical shared resources where Circular Wait and Deadlock are highly probable.",
+    concept_how: "Philosophers (Threads) must independently secure both the Left and Right forks (Mutex locks). Complete resolutions involve enforcing rigid asymmetrical acquisition constraints (e.g., odd philosophers pick left first, while evens pick right first).",
     formulas: [
       "Mutex Lock(Fork[i]) : Protects left fork",
       "Mutex Lock(Fork[(i+1)%N]) : Protects right fork",
@@ -413,6 +427,8 @@ int main() {
   'producer-consumer': {
     title: "Producer-Consumer (Bounded Buffer)",
     description: "A multi-process synchronization problem proposing two entities, the producer and the consumer, who share a common, fixed-size buffer. The producer's job is to generate data and put it into the buffer. The consumer's job is to consume data. The problem mandates that the producer won't try to add data to the buffer if it's full and that the consumer won't try to remove data if it's empty.",
+    concept_why: "Crucially establishes a secure architectural pattern for transferring high-velocity data asynchronously between parallel background processes operating at vastly different execution or I/O speeds.",
+    concept_how: "Leverages binary and counting Semaphores specifically to track empty vs full buffer slots. Producers naturally halt if the mathematical buffer is full, while Consumers block recursively if the buffer is empty, guaranteeing total system safety.",
     formulas: [
       "Semaphore empty_slots = N (Buffer Size)",
       "Semaphore full_slots = 0",
@@ -482,6 +498,8 @@ int main() {
   'readers-writers': {
     title: "Readers-Writers Problem",
     description: "Models access to a database (or a section of memory). Many threads may read the data simultaneously, but if a thread wants to write to it, it MUST have exclusive access to the database (nobody else can read or write at that exact moment).",
+    concept_why: "Actively protects massively structured databases or shared memory pools from violent cascading record corruption. Allows for dense parallel reading while mandating extreme exclusivity during ANY mutations (writes).",
+    concept_how: "A standard mutex safeguards the 'reader_count' integer variable over the network. The very first reader manually locks out the writers natively, while the very last terminating reader unlocks the writers. Writers independently halt all other access structures during their localized critical section.",
     formulas: [
       "Mutex: Protects the shared 'readers_count' integer variable",
       "Write_Block: Mutex explicitly locking out writers",
@@ -543,6 +561,8 @@ int main() {
   Threads: {
     title: "Multi-Threading & Concurrency",
     description: "Demonstrates concurrent execution within a single process. Multiple threads operate over the same shared memory space, necessitating strict synchronization techniques like Mutex locks to prevent mathematical Race Conditions while operating inside a Critical Section.",
+    concept_why: "Explicitly utilized to vastly maximize multi-core CPU utilization. Deploying and spawning threads is exponentially cheaper computationally in regards to context-switching overhead memory matrices than forking entirely new heavy Processes.",
+    concept_how: "Discrete Threads execute completely independently through the CPU hardware block but inherently share their primary Parent Process's memory space and heap array, strictly necessitating global Mutex logic blocking over variables to actively intercept array Race Conditions.",
     formulas: [
       "Context Overhead: Thread Switch << Process Switch",
       "Critical Section: Shared memory block actively undergoing mutation",
@@ -654,38 +674,61 @@ export const AlgorithmDeepDive = ({ algorithm }: AlgorithmDeepDiveProps) => {
                     initial={{ opacity: 0, x: -20, filter: 'blur(10px)' }}
                     animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
                     exit={{ opacity: 0, x: 20, filter: 'blur(10px)' }}
-                    className="grid grid-cols-1 md:grid-cols-2 gap-12"
+                    className="grid grid-cols-1 lg:grid-cols-2 gap-12"
                   >
-                     <div className="space-y-6">
-                        <h3 className="text-sm font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
-                           <BookOpen size={16} className="text-primary" /> Principles of Operation
-                        </h3>
-                        <p className="text-slate-300 leading-relaxed font-medium">
-                           {data.description}
-                        </p>
-                        
-                        <div className="pt-6 space-y-4">
-                           <h3 className="text-sm font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
-                             <Calculator size={16} className="text-secondary" /> Applied Formulas
+                     <div className="space-y-8">
+                        <div>
+                           <h3 className="text-sm font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2 mb-4">
+                              <BookOpen size={16} className="text-primary" /> Core Definition
                            </h3>
-                           <div className="space-y-3">
+                           <p className="text-slate-300 leading-relaxed font-medium">
+                              {data.description}
+                           </p>
+                        </div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                           <div className="p-6 rounded-3xl bg-primary/5 border border-primary/20 space-y-3 shadow-[inset_0_0_20px_rgba(0,243,255,0.05)]">
+                              <h4 className="text-xs font-black text-primary uppercase tracking-widest flex items-center gap-2">
+                                <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+                                Why Do We Use It?
+                              </h4>
+                              <p className="text-[11px] text-slate-300 leading-relaxed font-medium">{data.concept_why}</p>
+                           </div>
+                           
+                           <div className="p-6 rounded-3xl bg-secondary/5 border border-secondary/20 space-y-3 shadow-[inset_0_0_20px_rgba(157,0,255,0.05)]">
+                              <h4 className="text-xs font-black text-secondary uppercase tracking-widest flex items-center gap-2">
+                                <span className="w-2 h-2 rounded-full bg-secondary animate-pulse" />
+                                How Does It Work?
+                              </h4>
+                              <p className="text-[11px] text-slate-300 leading-relaxed font-medium">{data.concept_how}</p>
+                           </div>
+                        </div>
+
+                        <div className="pt-2 space-y-4">
+                           <h3 className="text-sm font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2 mb-4">
+                             <Calculator size={16} className="text-accent" /> Applied Constraints / Logic
+                           </h3>
+                           <div className="space-y-3 gap-3">
                               {data.formulas.map((formula, idx) => (
-                                <div key={idx} className="bg-slate-900/50 border border-white/5 px-4 py-3 rounded-xl font-mono text-xs text-primary/90 flex shadow-inner">
-                                   <span className="text-slate-500 mr-3">[{idx + 1}]</span>
+                                <div key={idx} className="bg-slate-900/50 border border-white/5 px-4 py-3 rounded-xl font-mono text-xs text-slate-300 flex items-center shadow-inner hover:bg-white/5 transition-all">
+                                   <span className="text-accent font-black mr-4 bg-accent/10 px-2 py-1 rounded-md">[{idx + 1}]</span>
                                    {formula}
                                 </div>
                               ))}
                            </div>
                         </div>
                      </div>
-                     <div className="bg-gradient-to-br from-primary/5 to-transparent rounded-[2rem] border border-primary/10 overflow-hidden flex flex-col items-center justify-center p-8 text-center relative shadow-[inset_0_0_50px_rgba(0,243,255,0.05)]">
-                        <Terminal size={48} className="text-primary/20 mb-6" />
-                        <h4 className="text-primary font-black uppercase tracking-widest mb-2">Algorithm Selected</h4>
-                        <div className="text-5xl font-black italic tracking-tighter text-transparent bg-clip-text bg-gradient-to-br from-white to-slate-500 opacity-80">
-                           {algorithm}
+
+                     <div className="bg-gradient-to-br from-primary/5 to-transparent rounded-[2rem] border border-primary/10 overflow-hidden flex flex-col items-center justify-center p-12 text-center relative shadow-[inset_0_0_50px_rgba(0,243,255,0.05)] h-full min-h-[400px]">
+                        <Terminal size={64} className="text-primary/20 mb-8" />
+                        <h4 className="text-primary font-black uppercase tracking-widest mb-4">Algorithm Selected</h4>
+                        <div className="flex flex-wrap items-center justify-center">
+                          <div className="text-4xl lg:text-5xl font-black italic tracking-tighter text-transparent bg-clip-text bg-gradient-to-br from-white to-slate-600">
+                             {algorithm}
+                          </div>
                         </div>
-                        <p className="text-slate-400 mt-4 text-xs max-w-xs font-mono">
-                           Modify values in the actual Control Unit above. The live Gantt chart perfectly mirrors this core theory.
+                        <p className="text-slate-400 mt-8 text-xs max-w-sm font-mono leading-relaxed border-t border-white/5 pt-6">
+                           Modify values in the actual Control Unit above. The live computational engine perfectly mirrors this core theory.
                         </p>
                      </div>
                   </motion.div>
