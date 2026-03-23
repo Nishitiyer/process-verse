@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
   LayoutDashboard, 
@@ -9,6 +9,7 @@ import {
   BarChart3, 
   BookOpen,
   Play,
+  Pause,
   RotateCcw
 } from 'lucide-react'
 
@@ -21,7 +22,19 @@ import { PerformanceGraphs } from './sections/PerformanceGraphs'
 import { LearnPanel } from './sections/LearnPanel'
 
 function App() {
-  const [activeSection, setActiveSection] = useState('dashboard')
+  const [activeSection, setActiveSection] = useState('processes')
+  const [isGlobalPlaying, setIsGlobalPlaying] = useState(false)
+
+  useEffect(() => {
+    const handleToggle = () => setIsGlobalPlaying(p => !p)
+    const handleReset = () => setIsGlobalPlaying(false)
+    window.addEventListener('GLOBAL_PLAY_TOGGLE', handleToggle)
+    window.addEventListener('GLOBAL_RESET', handleReset)
+    return () => {
+      window.removeEventListener('GLOBAL_PLAY_TOGGLE', handleToggle)
+      window.removeEventListener('GLOBAL_RESET', handleReset)
+    }
+  }, [])
 
   const navItems = [
     { id: 'dashboard', label: 'Monitor', icon: LayoutDashboard },
@@ -125,10 +138,10 @@ function App() {
               </button>
               <button 
                 onClick={() => window.dispatchEvent(new CustomEvent('GLOBAL_PLAY_TOGGLE'))}
-                className="px-5 py-2.5 rounded-2xl bg-primary text-black font-black text-[10px] uppercase tracking-widest shadow-[0_0_20px_rgba(0,243,255,0.2)] hover:shadow-[0_0_30px_rgba(0,243,255,0.4)] transition-all flex items-center gap-2 active:scale-95"
+                className={`px-5 py-2.5 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-[0_0_20px_rgba(0,243,255,0.2)] hover:shadow-[0_0_30px_rgba(0,243,255,0.4)] transition-all flex items-center gap-2 active:scale-95 ${isGlobalPlaying ? 'bg-amber-500/20 text-amber-500 border border-amber-500/30' : 'bg-primary text-black'}`}
               >
-                <Play size={14} fill="currentColor" />
-                Live Run Toggle
+                {isGlobalPlaying ? <Pause size={14} /> : <Play size={14} fill="currentColor" />}
+                {isGlobalPlaying ? 'PAUSE SYSTEM' : 'LIVE RUN TOGGLE'}
               </button>
             </div>
           </div>

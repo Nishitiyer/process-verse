@@ -141,6 +141,7 @@ export const ProcessManagement = () => {
     const algos: ('FCFS'|'SJF'|'Priority'|'RR')[] = ['FCFS', 'SJF', 'Priority', 'RR']
     const nextIdx = (algos.indexOf(algorithm) + 1) % algos.length
     setAlgorithm(algos[nextIdx])
+    resetSim()
   }
 
   const resetSim = () => {
@@ -244,14 +245,21 @@ export const ProcessManagement = () => {
                          </button>
                        </div>
                     </div>
-                    <div className="flex justify-between items-center text-[10px] uppercase font-bold text-slate-500 tracking-widest">
-                       <span>Time Quantum</span>
-                       <div className="flex items-center gap-1.5">
-                         <button onClick={() => setQuantum(Math.max(1, quantum - 1))} className="w-5 h-5 rounded hover:bg-white/10 flex items-center justify-center text-slate-400 font-bold">-</button>
-                         <span className="text-secondary font-mono bg-secondary/10 px-2 py-0.5 rounded">{quantum}T</span>
-                         <button onClick={() => setQuantum(quantum + 1)} className="w-5 h-5 rounded hover:bg-white/10 flex items-center justify-center text-slate-400 font-bold">+</button>
-                       </div>
-                    </div>
+                    {algorithm === 'RR' ? (
+                      <div className="flex justify-between items-center text-[10px] uppercase font-bold text-slate-500 tracking-widest">
+                         <span>Time Quantum</span>
+                         <div className="flex items-center gap-1.5">
+                           <button onClick={() => setQuantum(Math.max(1, quantum - 1))} className="w-5 h-5 rounded hover:bg-white/10 flex items-center justify-center text-slate-400 font-bold">-</button>
+                           <span className="text-secondary font-mono bg-secondary/10 px-2 py-0.5 rounded">{quantum}T</span>
+                           <button onClick={() => setQuantum(quantum + 1)} className="w-5 h-5 rounded hover:bg-white/10 flex items-center justify-center text-slate-400 font-bold">+</button>
+                         </div>
+                      </div>
+                    ) : (
+                      <div className="flex justify-between items-center text-[10px] uppercase font-bold text-slate-500 tracking-widest opacity-30">
+                         <span>Time Quantum</span>
+                         <span className="text-slate-500 font-mono">N/A</span>
+                      </div>
+                    )}
                  </div>
               </div>
 
