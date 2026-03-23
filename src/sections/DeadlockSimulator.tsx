@@ -17,6 +17,7 @@ import {
   Resource, 
   checkSafeState 
 } from '../logic/deadlockSim'
+import { AlgorithmDeepDive } from '../components/AlgorithmDeepDive'
 
 export const DeadlockSimulator = () => {
   const [resources, setResources] = useState<Resource[]>([
@@ -360,6 +361,8 @@ export const DeadlockSimulator = () => {
           </AnimatePresence>
         </div>
       </div>
+      
+      <AlgorithmDeepDive algorithm="Banker" />
     </div>
   )
 }

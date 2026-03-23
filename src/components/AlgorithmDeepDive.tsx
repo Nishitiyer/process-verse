@@ -2,8 +2,10 @@ import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Code2, BookOpen, Terminal, ChevronRight, Binary, Calculator } from 'lucide-react'
 
+export type OSAlgorithm = 'FCFS' | 'SJF' | 'Priority' | 'RR' | 'Banker' | 'philosophers' | 'producer-consumer' | 'readers-writers'
+
 interface AlgorithmDeepDiveProps {
-  algorithm: 'FCFS' | 'SJF' | 'Priority' | 'RR'
+  algorithm: OSAlgorithm
 }
 
 type TheoryData = {
@@ -13,7 +15,7 @@ type TheoryData = {
   code: string
 }
 
-const THEORY_DICT: Record<'FCFS' | 'SJF' | 'Priority' | 'RR', TheoryData> = {
+const THEORY_DICT: Record<OSAlgorithm, TheoryData> = {
   FCFS: {
     title: 'First-Come, First-Served (FCFS)',
     description: 'The simplest scheduling algorithm. Processes are dispatched according to their arrival time on the ready queue. Being a non-preemptive algorithm, once the CPU has been allocated to a process, that process keeps the CPU until it releases it, either by terminating or by requesting I/O.',
@@ -259,6 +261,282 @@ int main() {
         if(ch == 1) executeRR();
         else break;
     }
+    return 0;
+}`
+  },
+  Banker: {
+    title: "Banker's Algorithm",
+    description: "A resource allocation and deadlock avoidance algorithm. It tests for safety by simulating the allocation of predetermined maximum possible amounts of all resources. It makes an 's-state' check to test for possible deadlock conditions for all other pending activities before deciding whether allocation should be allowed to continue.",
+    formulas: [
+      "Need Matrix = Max Matrix - Allocation Matrix",
+      "Safety Check: If Need[i] <= Available, Execute Process",
+      "Reclaim: Available = Available + Allocation[i] (Upon Completion)"
+    ],
+    code: `// Banker's Algorithm in C
+#include <stdio.h>
+
+void executeBankers() {
+    int n, r, i, j, k;
+    printf("Enter number of processes: ");
+    scanf("%d", &n);
+    printf("Enter number of resources: ");
+    scanf("%d", &r);
+    
+    int alloc[n][r], max[n][r], avail[r];
+    
+    printf("Enter Allocation Matrix:\\n");
+    for(i = 0; i < n; i++)
+        for(j = 0; j < r; j++)
+            scanf("%d", &alloc[i][j]);
+            
+    printf("Enter Max Matrix:\\n");
+    for(i = 0; i < n; i++)
+        for(j = 0; j < r; j++)
+            scanf("%d", &max[i][j]);
+            
+    printf("Enter Available Resources:\\n");
+    for(j = 0; j < r; j++)
+        scanf("%d", &avail[j]);
+        
+    int f[n], ans[n], ind = 0;
+    for (k = 0; k < n; k++) f[k] = 0;
+    
+    int need[n][r];
+    for (i = 0; i < n; i++) {
+        for (j = 0; j < r; j++) {
+            need[i][j] = max[i][j] - alloc[i][j];
+        }
+    }
+    
+    int y = 0;
+    for (k = 0; k < 5; k++) {
+        for (i = 0; i < n; i++) {
+            if (f[i] == 0) {
+                int flag = 0;
+                for (j = 0; j < r; j++) {
+                    if (need[i][j] > avail[j]){
+                        flag = 1;
+                        break;
+                    }
+                }
+                if (flag == 0) {
+                    ans[ind++] = i;
+                    for (y = 0; y < r; y++)
+                        avail[y] += alloc[i][y];
+                    f[i] = 1;
+                }
+            }
+        }
+    }
+    
+    int flag = 1;
+    for(int i = 0;i < n; i++) {
+        if(f[i] == 0) {
+            flag = 0;
+            printf("System is NOT in a safe state! (Deadlock)\\n");
+            break;
+        }
+    }
+    
+    if(flag == 1) {
+        printf("System is in a SAFE STATE.\\nSafe Sequence is: ");
+        for (i = 0; i < n - 1; i++) printf(" P%d ->", ans[i]);
+        printf(" P%d\\n", ans[n - 1]);
+    }
+}
+
+int main() {
+    int choice;
+    while(1) {
+        printf("\\n--- Banker's Algorithm ---\\n1. Check Safe State\\n2. Exit\\nEnter: ");
+        scanf("%d", &choice);
+        if(choice == 1) executeBankers();
+        else break;
+    }
+    return 0;
+}`
+  },
+  philosophers: {
+    title: "Dining Philosophers",
+    description: "A classic synchronization problem illustrating issues with resource sharing. Five philosophers sit at a table doing one of two things: eating or thinking. While eating, they must hold both the fork on their left and the right. This inherently creates the potential for deadlock (if everyone grabs the left fork simultaneously).",
+    formulas: [
+      "Mutex Lock(Fork[i]) : Protects left fork",
+      "Mutex Lock(Fork[(i+1)%N]) : Protects right fork",
+      "Deadlock Prevention: Enforce asymmetric pickup (Odd/Even logic)"
+    ],
+    code: `// Dining Philosophers using Pthreads & Mutex
+#include <stdio.h>
+#include <pthread.h>
+#include <unistd.h>
+
+#define N 5
+pthread_mutex_t forks[N];
+
+void* philosopher(void* num) {
+    int id = *(int*)num;
+    printf("Philosopher %d is thinking.\\n", id);
+    sleep(1);
+    
+    printf("Philosopher %d is hungry.\\n", id);
+    
+    // Simple implementation (prone to deadlock if all pick left simultaneously)
+    pthread_mutex_lock(&forks[id]);
+    pthread_mutex_lock(&forks[(id + 1) % N]);
+    
+    printf("Philosopher %d is eating.\\n", id);
+    sleep(2);
+    
+    pthread_mutex_unlock(&forks[(id + 1) % N]);
+    pthread_mutex_unlock(&forks[id]);
+    
+    printf("Philosopher %d finished eating.\\n", id);
+    return NULL;
+}
+
+int main() {
+    pthread_t phils[N];
+    int ids[N];
+    
+    for(int i=0; i<N; i++) pthread_mutex_init(&forks[i], NULL);
+    
+    for(int i=0; i<N; i++) {
+        ids[i] = i;
+        pthread_create(&phils[i], NULL, philosopher, &ids[i]);
+    }
+    
+    for(int i=0; i<N; i++) pthread_join(phils[i], NULL);
+    for(int i=0; i<N; i++) pthread_mutex_destroy(&forks[i]);
+    
+    return 0;
+}`
+  },
+  'producer-consumer': {
+    title: "Producer-Consumer (Bounded Buffer)",
+    description: "A multi-process synchronization problem proposing two entities, the producer and the consumer, who share a common, fixed-size buffer. The producer's job is to generate data and put it into the buffer. The consumer's job is to consume data. The problem mandates that the producer won't try to add data to the buffer if it's full and that the consumer won't try to remove data if it's empty.",
+    formulas: [
+      "Semaphore empty_slots = N (Buffer Size)",
+      "Semaphore full_slots = 0",
+      "Mutex = 1 (Binary Semaphore for mutual exclusion)"
+    ],
+    code: `// Producer-Consumer using Semaphores
+#include <stdio.h>
+#include <pthread.h>
+#include <semaphore.h>
+#include <unistd.h>
+
+#define MAX 5
+int buffer[MAX], in = 0, out = 0;
+sem_t empty, full;
+pthread_mutex_t mutex;
+
+void* producer(void* arg) {
+    for(int i = 0; i < 5; i++) {
+        sem_wait(&empty);
+        pthread_mutex_lock(&mutex);
+        
+        buffer[in] = i;
+        printf("Produced Item %d at %d\\n", buffer[in], in);
+        in = (in + 1) % MAX;
+        
+        pthread_mutex_unlock(&mutex);
+        sem_post(&full);
+        sleep(1);
+    }
+    return NULL;
+}
+
+void* consumer(void* arg) {
+    for(int i = 0; i < 5; i++) {
+        sem_wait(&full);
+        pthread_mutex_lock(&mutex);
+        
+        int item = buffer[out];
+        printf("Consumed Item %d from %d\\n", item, out);
+        out = (out + 1) % MAX;
+        
+        pthread_mutex_unlock(&mutex);
+        sem_post(&empty);
+        sleep(1);
+    }
+    return NULL;
+}
+
+int main() {
+    pthread_t prod, cons;
+    pthread_mutex_init(&mutex, NULL);
+    sem_init(&empty, 0, MAX);
+    sem_init(&full, 0, 0);
+    
+    pthread_create(&prod, NULL, producer, NULL);
+    pthread_create(&cons, NULL, consumer, NULL);
+    
+    pthread_join(prod, NULL);
+    pthread_join(cons, NULL);
+    
+    pthread_mutex_destroy(&mutex);
+    sem_destroy(&empty);
+    sem_destroy(&full);
+    return 0;
+}`
+  },
+  'readers-writers': {
+    title: "Readers-Writers Problem",
+    description: "Models access to a database (or a section of memory). Many threads may read the data simultaneously, but if a thread wants to write to it, it MUST have exclusive access to the database (nobody else can read or write at that exact moment).",
+    formulas: [
+      "Mutex: Protects the shared 'readers_count' integer variable",
+      "Write_Block: Mutex explicitly locking out writers",
+      "Rule: If readers_count > 0, write_block is firmly engaged."
+    ],
+    code: `// Readers-Writers using Pthreads
+#include <stdio.h>
+#include <pthread.h>
+#include <unistd.h>
+
+pthread_mutex_t mutex, write_block;
+int data = 0, readers = 0;
+
+void* reader(void* arg) {
+    int id = *(int*)arg;
+    pthread_mutex_lock(&mutex);
+    readers++;
+    if(readers == 1) pthread_mutex_lock(&write_block);
+    pthread_mutex_unlock(&mutex);
+    
+    printf("Reader %d reads data: %d\\n", id, data);
+    sleep(1);
+    
+    pthread_mutex_lock(&mutex);
+    readers--;
+    if(readers == 0) pthread_mutex_unlock(&write_block);
+    pthread_mutex_unlock(&mutex);
+    return NULL;
+}
+
+void* writer(void* arg) {
+    int id = *(int*)arg;
+    pthread_mutex_lock(&write_block);
+    
+    data++;
+    printf("Writer %d modified data to %d\\n", id, data);
+    sleep(2);
+    
+    pthread_mutex_unlock(&write_block);
+    return NULL;
+}
+
+int main() {
+    pthread_t r[3], w[2];
+    int id[3] = {1, 2, 3};
+    
+    pthread_mutex_init(&mutex, NULL);
+    pthread_mutex_init(&write_block, NULL);
+    
+    for(int i=0; i<2; i++) pthread_create(&w[i], NULL, writer, &id[i]);
+    for(int i=0; i<3; i++) pthread_create(&r[i], NULL, reader, &id[i]);
+    
+    for(int i=0; i<2; i++) pthread_join(w[i], NULL);
+    for(int i=0; i<3; i++) pthread_join(r[i], NULL);
+    
     return 0;
 }`
   }

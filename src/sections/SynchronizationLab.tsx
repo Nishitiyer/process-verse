@@ -14,6 +14,7 @@ import {
   Activity,
   Layers
 } from 'lucide-react'
+import { AlgorithmDeepDive, OSAlgorithm } from '../components/AlgorithmDeepDive'
 
 type PhilosopherStatus = 'thinking' | 'hungry' | 'eating'
 
@@ -246,6 +247,8 @@ export const SynchronizationLab = () => {
             </div>
          </div>
       </div>
+      
+      <AlgorithmDeepDive algorithm={activeLab as OSAlgorithm} />
     </div>
   )
 }
