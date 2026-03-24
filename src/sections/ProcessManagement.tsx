@@ -85,14 +85,16 @@ export const ProcessManagement = () => {
                 updatedGantt.push({ pid: picked.id, start: currentTime, end: currentTime + 1, color: picked.color })
               }
             } else if (currentRunning) {
-              currentRunning.burstTime -= 1
+              currentRunning.remainingTime -= 1
               if (updatedGantt.length > 0) updatedGantt[updatedGantt.length - 1].end = currentTime + 1
               quantumRef.current += 1
 
-              if (currentRunning.burstTime <= 0) {
+              if (currentRunning.remainingTime <= 0) {
                 const finishedId = currentRunning.id
                 currentRunning.state = 'terminated'
-                currentRunning.turnaroundTime = (currentTime + 1) - currentRunning.arrivalTime
+                currentRunning.finishTime = currentTime + 1
+                currentRunning.turnaroundTime = currentRunning.finishTime - currentRunning.arrivalTime
+                currentRunning.waitingTime = currentRunning.turnaroundTime - currentRunning.burstTime
                 
                 // Update main list
                 const idx = updatedProcesses.findIndex(px => px.id === finishedId)
@@ -135,6 +137,7 @@ export const ProcessManagement = () => {
   const [showAddForm, setShowAddForm] = useState(false)
   const [newBurst, setNewBurst] = useState(4)
   const [newPriority, setNewPriority] = useState(1)
+  const [newArrivalTime, setNewArrivalTime] = useState(0)
 
   const resetSim = () => {
     setIsRunning(false)
@@ -167,7 +170,7 @@ export const ProcessManagement = () => {
     const p: Process = {
       id: newId,
       name: `Task-${newId}`,
-      arrivalTime: Math.max(0, currentTime), // enters at current tick
+      arrivalTime: newArrivalTime,
       burstTime: newBurst,
       remainingTime: newBurst,
       priority: newPriority,
@@ -181,6 +184,7 @@ export const ProcessManagement = () => {
     // Reset form
     setNewBurst(4)
     setNewPriority(1)
+    setNewArrivalTime(currentTime)
   }
 
   const cycleAlgorithm = () => {
@@ -242,23 +246,29 @@ export const ProcessManagement = () => {
                  ) : (
                    <div className="p-6 rounded-3xl bg-white/[0.02] border border-primary/20 space-y-4 shadow-[0_0_20px_rgba(0,243,255,0.05)]">
                       <div className="flex items-center justify-between">
-                         <span className="text-[10px] uppercase font-bold text-slate-400">Burst Time (T)</span>
-                         <div className="flex items-center gap-3">
-                           <button onClick={() => setNewBurst(Math.max(1, newBurst - 1))} className="w-6 h-6 rounded bg-white/5 hover:bg-white/10 flex items-center justify-center font-bold text-slate-300">-</button>
-                           <span className="font-mono text-primary font-bold w-4 text-center">{newBurst}</span>
-                           <button onClick={() => setNewBurst(newBurst + 1)} className="w-6 h-6 rounded bg-white/5 hover:bg-white/10 flex items-center justify-center font-bold text-slate-300">+</button>
-                         </div>
-                      </div>
-                      {algorithm === 'Priority' && (
-                        <div className="flex items-center justify-between">
-                           <span className="text-[10px] uppercase font-bold text-slate-400">Priority (0=High)</span>
-                           <div className="flex items-center gap-3">
-                             <button onClick={() => setNewPriority(Math.max(0, newPriority - 1))} className="w-6 h-6 rounded bg-white/5 hover:bg-white/10 flex items-center justify-center font-bold text-slate-300">-</button>
-                             <span className="font-mono text-accent font-bold w-4 text-center">{newPriority}</span>
-                             <button onClick={() => setNewPriority(newPriority + 1)} className="w-6 h-6 rounded bg-white/5 hover:bg-white/10 flex items-center justify-center font-bold text-slate-300">+</button>
-                           </div>
-                        </div>
-                      )}
+                          <span className="text-[10px] uppercase font-bold text-slate-400">Arrival Time</span>
+                          <div className="flex items-center gap-3">
+                            <button onClick={() => setNewArrivalTime(Math.max(0, newArrivalTime - 1))} className="w-6 h-6 rounded bg-white/5 hover:bg-white/10 flex items-center justify-center font-bold text-slate-300">-</button>
+                            <span className="font-mono text-primary font-bold w-4 text-center">{newArrivalTime}</span>
+                            <button onClick={() => setNewArrivalTime(newArrivalTime + 1)} className="w-6 h-6 rounded bg-white/5 hover:bg-white/10 flex items-center justify-center font-bold text-slate-300">+</button>
+                          </div>
+                       </div>
+                       <div className="flex items-center justify-between">
+                          <span className="text-[10px] uppercase font-bold text-slate-400">Burst Time (T)</span>
+                          <div className="flex items-center gap-3">
+                            <button onClick={() => setNewBurst(Math.max(1, newBurst - 1))} className="w-6 h-6 rounded bg-white/5 hover:bg-white/10 flex items-center justify-center font-bold text-slate-300">-</button>
+                            <span className="font-mono text-primary font-bold w-4 text-center">{newBurst}</span>
+                            <button onClick={() => setNewBurst(newBurst + 1)} className="w-6 h-6 rounded bg-white/5 hover:bg-white/10 flex items-center justify-center font-bold text-slate-300">+</button>
+                          </div>
+                       </div>
+                       <div className="flex items-center justify-between">
+                          <span className="text-[10px] uppercase font-bold text-slate-400">Priority (0=High)</span>
+                          <div className="flex items-center gap-3">
+                            <button onClick={() => setNewPriority(Math.max(0, newPriority - 1))} className="w-6 h-6 rounded bg-white/5 hover:bg-white/10 flex items-center justify-center font-bold text-slate-300">-</button>
+                            <span className="font-mono text-accent font-bold w-4 text-center">{newPriority}</span>
+                            <button onClick={() => setNewPriority(newPriority + 1)} className="w-6 h-6 rounded bg-white/5 hover:bg-white/10 flex items-center justify-center font-bold text-slate-300">+</button>
+                          </div>
+                       </div>
                       <div className="flex gap-2 pt-2">
                          <button onClick={() => setShowAddForm(false)} className="flex-1 py-2 rounded-xl border border-white/10 text-xs font-bold text-slate-400 hover:text-white hover:bg-white/5">Cancel</button>
                          <button onClick={submitNewProcess} className="flex-1 py-2 rounded-xl bg-primary text-black text-xs font-black uppercase tracking-widest hover:shadow-[0_0_15px_rgba(0,243,255,0.4)]">Deploy</button>
@@ -407,12 +417,65 @@ export const ProcessManagement = () => {
                                </div>
                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{p.name}</span>
                             </div>
-                            <span className="text-[10px] font-mono font-bold text-primary">{p.burstTime}T REM</span>
+                            <span className="text-[10px] font-mono font-bold text-primary">{p.remainingTime}T REM</span>
                          </motion.div>
                        ))}
                     </AnimatePresence>
                     {readyQueue.length === 0 && <p className="text-center text-slate-700 italic text-xs py-10 font-mono uppercase tracking-widest">Queue_Empty</p>}
                  </div>
+              </div>
+           </div>
+
+           {/* Metrics Table */}
+           <div className="glass-card">
+              <h3 className="text-sm font-black uppercase tracking-[0.2em] text-slate-500 mb-8 flex items-center gap-2">
+                 <Activity size={18} className="text-primary" />
+                 Simulation Analysis
+              </h3>
+              
+              <div className="overflow-x-auto custom-scrollbar">
+                <table className="w-full text-left font-mono text-[10px]">
+                  <thead>
+                    <tr className="border-b border-white/5 text-slate-500">
+                      <th className="pb-4 font-black">PROCESS</th>
+                      <th className="pb-4 font-black text-center">ARRIVAL</th>
+                      <th className="pb-4 font-black text-center">BURST</th>
+                      <th className="pb-4 font-black text-center">FINISH</th>
+                      <th className="pb-4 font-black text-center">TAT</th>
+                      <th className="pb-4 font-black text-center">WT</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/5">
+                    {processes.map(p => (
+                      <tr key={p.id} className="group hover:bg-white/[0.02]">
+                        <td className="py-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: p.color }} />
+                            <span className="font-bold text-white italic">P{p.id} ({p.name})</span>
+                          </div>
+                        </td>
+                        <td className="py-4 text-center text-slate-400">{p.arrivalTime}</td>
+                        <td className="py-4 text-center text-slate-400">{p.burstTime}</td>
+                        <td className="py-4 text-center font-bold text-primary">{p.state === 'terminated' ? p.finishTime : '-'}</td>
+                        <td className="py-4 text-center font-bold text-secondary">{p.state === 'terminated' ? p.turnaroundTime : '-'}</td>
+                        <td className="py-4 text-center font-bold text-accent">{p.state === 'terminated' ? p.waitingTime : '-'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  {processes.some(p => p.state === 'terminated') && (
+                    <tfoot>
+                      <tr className="border-t border-white/10 bg-white/[0.02]">
+                        <td colSpan={4} className="py-4 font-black text-right pr-8 text-slate-500 uppercase tracking-widest">Averages</td>
+                        <td className="py-4 text-center font-black text-secondary">
+                          {(processes.filter(p => p.state === 'terminated').reduce((acc, p) => acc + p.turnaroundTime, 0) / processes.filter(p => p.state === 'terminated').length).toFixed(2)}
+                        </td>
+                        <td className="py-4 text-center font-black text-accent">
+                          {(processes.filter(p => p.state === 'terminated').reduce((acc, p) => acc + p.waitingTime, 0) / processes.filter(p => p.state === 'terminated').length).toFixed(2)}
+                        </td>
+                      </tr>
+                    </tfoot>
+                  )}
+                </table>
               </div>
            </div>
         </div>
