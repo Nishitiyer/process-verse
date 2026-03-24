@@ -42,7 +42,7 @@ export const ThreadManagement = () => {
     nextId: 3, // Global counter for unique IDs
   })
 
-  const { threads, isRunning, currentTime, cpuUsage, nextId } = simState
+  const { threads, isRunning, currentTime, cpuUsage } = simState
   const [logs, setLogs] = useState<TraceLog[]>([])
   const timerRef = useRef<any>(null)
   const listRef = useRef<HTMLDivElement>(null)
