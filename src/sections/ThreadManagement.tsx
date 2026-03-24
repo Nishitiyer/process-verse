@@ -22,55 +22,103 @@ interface Thread {
   priority: number
   color: string
   progress: number
+  arrivalTime: number
+  finishTime?: number
+  waitingTime: number
+  turnaroundTime: number
+  burstTime: number // Default execution time in ticks
 }
 
 export const ThreadManagement = () => {
-  const [threads, setThreads] = useState<Thread[]>([
-    { id: 1, state: 'ready', priority: 1, color: THREAD_COLORS[0], progress: 0 },
-    { id: 2, state: 'ready', priority: 0, color: THREAD_COLORS[1], progress: 0 },
-  ])
-  const [isRunning, setIsRunning] = useState(false)
-  const [cpuUsage, setCpuUsage] = useState(0)
+  // Unified Simulation State
+  const [simState, setSimState] = useState({
+    threads: [
+      { id: 1, state: 'ready', priority: 1, color: THREAD_COLORS[0], progress: 0, arrivalTime: 0, waitingTime: 0, turnaroundTime: 0, burstTime: 20 },
+      { id: 2, state: 'ready', priority: 0, color: THREAD_COLORS[1], progress: 0, arrivalTime: 0, waitingTime: 0, turnaroundTime: 0, burstTime: 20 },
+    ] as Thread[],
+    isRunning: false,
+    currentTime: 0,
+    cpuUsage: 0,
+  })
+
+  // Destructure for easier use
+  const { threads, isRunning, currentTime, cpuUsage } = simState
+
   const [logs, setLogs] = useState<TraceLog[]>([])
   const timerRef = useRef<any>(null)
 
+  // Simulation Engine (Flat & Atomic)
+  const tick = () => {
+    setSimState(prev => {
+      const nextTime = prev.currentTime + 1
+      const nextThreads = prev.threads.map(t => ({ ...t }))
+      let nextLogs: TraceLog[] = []
+      
+      const runningIdx = nextThreads.findIndex(t => t.state === 'running')
+      
+      if (runningIdx === -1) {
+        // Scheduler: Pick first ready thread
+        const readyIdx = nextThreads.findIndex(t => t.state === 'ready')
+        if (readyIdx !== -1) {
+          nextThreads[readyIdx].state = 'running'
+          nextLogs.push({ 
+            id: Date.now().toString() + "-run", 
+            timestamp: new Date().toISOString().split('T')[1].slice(0, 11), 
+            code: `pthread_mutex_lock(&cpu_lock); // Dispatching T${nextThreads[readyIdx].id}`, 
+            explanation: `Thread ${nextThreads[readyIdx].id} acquired the CPU Mutex and entered the Running state.` 
+          })
+        }
+      } else {
+        // Execute running thread
+        const currentThread = nextThreads[runningIdx]
+        currentThread.progress += 5
+        
+        if (currentThread.progress >= 100) {
+          currentThread.state = 'terminated'
+          currentThread.progress = 100
+          currentThread.finishTime = nextTime
+          
+          // Metrics calculation: 
+          // burstTime is 20 ticks (100% / 5% per tick)
+          currentThread.turnaroundTime = currentThread.finishTime - currentThread.arrivalTime
+          currentThread.waitingTime = currentThread.turnaroundTime - currentThread.burstTime
+          
+          nextLogs.push({ 
+            id: Date.now().toString() + "-term", 
+            timestamp: new Date().toISOString().split('T')[1].slice(0, 11), 
+            code: `pthread_exit(NULL); // Releasing CPU Mutex`, 
+            explanation: `Thread ${currentThread.id} completed execution at Time ${nextTime}.` 
+          })
+        }
+      }
+
+      const nextCpuUsage = prev.isRunning ? (Math.floor(Math.random() * 30) + 40) : 0
+      
+      if (nextLogs.length > 0) {
+        setLogs(prevLogs => [...prevLogs.slice(-20), ...nextLogs])
+      }
+
+      return {
+        ...prev,
+        threads: nextThreads,
+        currentTime: nextTime,
+        cpuUsage: nextCpuUsage,
+      }
+    })
+  }
+
+  // Stable Timer Effect
   useEffect(() => {
     if (isRunning) {
-      timerRef.current = setInterval(() => {
-        let newLog: TraceLog | null = null
-        setThreads(prev => {
-          const next = prev.map(t => ({ ...t }))
-          const runningIdx = next.findIndex(t => t.state === 'running')
-          
-          if (runningIdx === -1) {
-            const readyIdx = next.findIndex(t => t.state === 'ready')
-            if (readyIdx !== -1) {
-              next[readyIdx].state = 'running'
-              newLog = { id: Date.now().toString() + "-run", timestamp: new Date().toISOString().split('T')[1].slice(0, 11), code: `pthread_mutex_lock(&cpu_lock); // Dispatching T${next[readyIdx].id}`, explanation: `Thread ${next[readyIdx].id} acquired the CPU Mutex and entered the Running state.` }
-            }
-          } else {
-            next[runningIdx].progress += 5
-            if (next[runningIdx].progress >= 100) {
-              const tid = next[runningIdx].id
-              next[runningIdx].state = 'terminated'
-              next[runningIdx].progress = 100
-              newLog = { id: Date.now().toString() + "-term", timestamp: new Date().toISOString().split('T')[1].slice(0, 11), code: `pthread_exit(NULL); // Releasing CPU Mutex`, explanation: `Thread ${tid} completed execution and released resources.` }
-            }
-          }
-          return next
-        })
-        if (newLog) setLogs(prevLogs => [...prevLogs.slice(-20), newLog!])
-        setCpuUsage(Math.floor(Math.random() * 30) + 40)
-      }, 200)
+      timerRef.current = setInterval(tick, 200)
     } else {
       clearInterval(timerRef.current)
-      setCpuUsage(0)
     }
     return () => clearInterval(timerRef.current)
-  }, [isRunning, threads])
+  }, [isRunning])
 
   useEffect(() => {
-    const handlePlay = () => setIsRunning(r => !r)
+    const handlePlay = () => setSimState(prev => ({ ...prev, isRunning: !prev.isRunning }))
     const handleReset = () => resetThreads()
     window.addEventListener('GLOBAL_PLAY_TOGGLE', handlePlay)
     window.addEventListener('GLOBAL_RESET', handleReset)
@@ -81,27 +129,41 @@ export const ThreadManagement = () => {
   }, [])
 
   const addThread = () => {
-    const newId = threads.length + 1
-    setThreads([...threads, {
-      id: newId,
-      state: 'ready',
-      priority: Math.floor(Math.random() * 3),
-      color: THREAD_COLORS[newId % THREAD_COLORS.length],
-      progress: 0
-    }])
+    setSimState(prev => {
+      const newId = prev.threads.length + 1
+      const newThread: Thread = {
+        id: newId,
+        state: 'ready',
+        priority: Math.floor(Math.random() * 3),
+        color: THREAD_COLORS[newId % THREAD_COLORS.length],
+        progress: 0,
+        arrivalTime: prev.currentTime,
+        waitingTime: 0,
+        turnaroundTime: 0,
+        burstTime: 20
+      }
+      return {
+        ...prev,
+        threads: [...prev.threads, newThread]
+      }
+    })
   }
 
   const resetThreads = () => {
-    setIsRunning(false)
     setLogs([])
-    setThreads([
-      { id: 1, state: 'ready', priority: 1, color: THREAD_COLORS[0], progress: 0 },
-      { id: 2, state: 'ready', priority: 0, color: THREAD_COLORS[1], progress: 0 },
-    ])
+    setSimState({
+      threads: [
+        { id: 1, state: 'ready', priority: 1, color: THREAD_COLORS[0], progress: 0, arrivalTime: 0, waitingTime: 0, turnaroundTime: 0, burstTime: 20 },
+        { id: 2, state: 'ready', priority: 0, color: THREAD_COLORS[1], progress: 0, arrivalTime: 0, waitingTime: 0, turnaroundTime: 0, burstTime: 20 },
+      ],
+      isRunning: false,
+      currentTime: 0,
+      cpuUsage: 0,
+    })
   }
 
   return (
-    <div className="p-12 space-y-12 max-w-7xl mx-auto">
+    <div className="p-12 space-y-12 max-w-7xl mx-auto custom-scrollbar">
        {/* Header Section */}
       <div className="flex items-center justify-between glass p-10 rounded-[3rem] border-white/[0.05] relative overflow-hidden">
         <div className="absolute top-0 right-0 p-10 text-primary/5 -z-10">
@@ -129,9 +191,13 @@ export const ThreadManagement = () => {
         </div>
 
         <div className="flex items-center gap-3 bg-white/[0.03] p-3 rounded-[2rem] border border-white/[0.05]">
+           <div className="flex items-center gap-3 bg-black/40 px-6 py-2 rounded-2xl border border-white/10 font-mono mr-4">
+              <span className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Tick</span>
+              <span className="text-secondary text-xl font-black">{currentTime}</span>
+           </div>
           <button 
-            onClick={() => setIsRunning(!isRunning)}
-            className={`px-8 py-4 rounded-2xl transition-all font-black text-sm flex items-center gap-3 ${isRunning ? 'bg-amber-500/20 text-amber-500 border border-amber-500/30' : 'btn-primary'}`}
+            onClick={() => setSimState(prev => ({ ...prev, isRunning: !prev.isRunning }))}
+            className={`px-8 py-4 rounded-2xl transition-all font-black text-sm flex items-center gap-3 ${isRunning ? 'bg-amber-500/20 text-amber-500 border border-amber-500/30' : 'btn-secondary text-white'}`}
           >
             {isRunning ? <Pause size={20} /> : <Play size={20} fill="currentColor" />}
             {isRunning ? 'SUSPEND' : 'EXECUTE'}
@@ -155,7 +221,7 @@ export const ThreadManagement = () => {
               </div>
 
               <div className="space-y-6">
-                 <button onClick={addThread} className="w-full btn-secondary flex items-center justify-center gap-3 py-4 text-xs">
+                 <button onClick={addThread} className="w-full btn-secondary flex items-center justify-center gap-3 py-4 text-xs font-black uppercase tracking-widest hover:shadow-[0_0_15px_rgba(157,0,255,0.4)]">
                     <Plus size={18} />
                     SPAWN NEW THREAD
                  </button>
@@ -228,6 +294,7 @@ export const ThreadManagement = () => {
                                 <h4 className="font-black text-lg tracking-tight flex items-center gap-2">
                                   Thread Worker #{t.id}
                                   {t.state === 'running' && <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-green-500 text-black uppercase animate-pulse">Running</span>}
+                                  {t.state === 'terminated' && <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-700 text-slate-400 uppercase">Finished</span>}
                                 </h4>
                                 <div className="flex gap-4 mt-1 font-mono text-[10px] uppercase font-bold">
                                    <span className="text-slate-500">Priority: <span className={t.priority === 0 ? 'text-accent' : 'text-slate-400'}>{t.priority === 0 ? 'Urgent' : t.priority === 1 ? 'Normal' : 'Background'}</span></span>
@@ -255,9 +322,62 @@ export const ThreadManagement = () => {
                 </AnimatePresence>
                 {threads.length === 0 && <div className="p-20 text-center text-slate-800 italic uppercase font-black tracking-widest text-2xl opacity-20">No_Threads_Active</div>}
               </div>
+
+              {/* Thread Analysis Table */}
+              <div className="mt-12 p-8 rounded-[2.5rem] bg-white/[0.02] border border-white/5">
+                <h3 className="text-sm font-black uppercase tracking-[0.2em] text-slate-500 mb-8 flex items-center gap-2">
+                   <Activity size={18} className="text-secondary" />
+                   Thread Performance Analysis
+                </h3>
+                
+                <div className="overflow-x-auto custom-scrollbar">
+                  <table className="w-full text-left font-mono text-[10px]">
+                    <thead>
+                      <tr className="border-b border-white/5 text-slate-500">
+                        <th className="pb-4 font-black">THREAD</th>
+                        <th className="pb-4 font-black text-center">SPAWN_TIME</th>
+                        <th className="pb-4 font-black text-center">BURST (T)</th>
+                        <th className="pb-4 font-black text-center">FINISH</th>
+                        <th className="pb-4 font-black text-center">TAT</th>
+                        <th className="pb-4 font-black text-center">WT</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-white/5">
+                      {threads.map(t => (
+                        <tr key={t.id} className="group hover:bg-white/[0.02]">
+                          <td className="py-4">
+                            <div className="flex items-center gap-3">
+                              <div className="w-2 h-2 rounded-full" style={{ backgroundColor: t.color }} />
+                              <span className="font-bold text-white italic">T{t.id} (Worker)</span>
+                            </div>
+                          </td>
+                          <td className="py-4 text-center text-slate-400">{t.arrivalTime}</td>
+                          <td className="py-4 text-center text-slate-400">{t.burstTime}</td>
+                          <td className="py-4 text-center font-bold text-secondary">{t.state === 'terminated' ? t.finishTime : '-'}</td>
+                          <td className="py-4 text-center font-bold text-primary">{t.state === 'terminated' ? t.turnaroundTime : '-'}</td>
+                          <td className="py-4 text-center font-bold text-accent">{t.state === 'terminated' ? t.waitingTime : '-'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    {threads.some(t => t.state === 'terminated') && (
+                      <tfoot>
+                        <tr className="border-t border-white/10 bg-white/[0.02]">
+                          <td colSpan={4} className="py-4 font-black text-right pr-8 text-slate-500 uppercase tracking-widest">Averages</td>
+                          <td className="py-4 text-center font-black text-primary">
+                            {(threads.filter(t => t.state === 'terminated').reduce((acc, t) => acc + t.turnaroundTime, 0) / threads.filter(t => t.state === 'terminated').length).toFixed(2)}
+                          </td>
+                          <td className="py-4 text-center font-black text-accent">
+                            {(threads.filter(t => t.state === 'terminated').reduce((acc, t) => acc + t.waitingTime, 0) / threads.filter(t => t.state === 'terminated').length).toFixed(2)}
+                          </td>
+                        </tr>
+                      </tfoot>
+                    )}
+                  </table>
+                </div>
+              </div>
               
               {/* Live Code Tracer */}
-              {isRunning && <LiveCodeTracer logs={logs} />}
+              <LiveCodeTracer logs={logs} />
            </div>
         </div>
       </div>
