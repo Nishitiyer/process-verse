@@ -16,24 +16,32 @@ import { AlgorithmDeepDive } from '../components/AlgorithmDeepDive'
 import { LiveCodeTracer, TraceLog } from '../components/LiveCodeTracer'
 
 export const ProcessManagement = () => {
-  const [processes, setProcesses] = useState<Process[]>([
-    { id: 1, name: 'Browser', arrivalTime: 0, burstTime: 6, remainingTime: 6, priority: 1, state: 'new', color: '#00f3ff', waitingTime: 0, turnaroundTime: 0 },
-    { id: 2, name: 'System', arrivalTime: 2, burstTime: 4, remainingTime: 4, priority: 0, state: 'new', color: '#9d00ff', waitingTime: 0, turnaroundTime: 0 },
-    { id: 3, name: 'Editor', arrivalTime: 4, burstTime: 3, remainingTime: 3, priority: 2, state: 'new', color: '#ff004c', waitingTime: 0, turnaroundTime: 0 },
-  ])
-  const [runningProcess, setRunningProcess] = useState<Process | null>(null)
-  const [readyQueue, setReadyQueue] = useState<Process[]>([])
-  const [ganttData, setGanttData] = useState<{pid: number, start: number, end: number, color: string}[]>([])
+  // Unified Simulation State
+  const [simState, setSimState] = useState({
+    processes: [
+      { id: 1, name: 'Browser', arrivalTime: 0, burstTime: 6, remainingTime: 6, priority: 1, state: 'new', color: '#00f3ff', waitingTime: 0, turnaroundTime: 0 },
+      { id: 2, name: 'System', arrivalTime: 2, burstTime: 4, remainingTime: 4, priority: 0, state: 'new', color: '#9d00ff', waitingTime: 0, turnaroundTime: 0 },
+      { id: 3, name: 'Editor', arrivalTime: 4, burstTime: 3, remainingTime: 3, priority: 2, state: 'new', color: '#ff004c', waitingTime: 0, turnaroundTime: 0 },
+    ] as Process[],
+    runningProcess: null as Process | null,
+    readyQueue: [] as Process[],
+    currentTime: 0,
+    ganttData: [] as {pid: number, start: number, end: number, color: string}[],
+  })
+
+  // Destructure for easier use in JSX
+  const { processes, runningProcess, readyQueue, currentTime, ganttData } = simState
+
   const [algorithm, setAlgorithm] = useState<'FCFS'|'SJF'|'Priority'|'RR'>('FCFS')
   const [quantum, setQuantum] = useState(2)
   const [timeStep] = useState(500) // ms per tick
 
   const [isRunning, setIsRunning] = useState(false)
-  const [currentTime, setCurrentTime] = useState(0)
   const [logs, setLogs] = useState<TraceLog[]>([])
   const timerRef = useRef<any>(null)
   const quantumRef = useRef(0)
 
+  // Stable Timer Effect
   useEffect(() => {
     if (isRunning) {
       timerRef.current = setInterval(() => {
@@ -43,94 +51,106 @@ export const ProcessManagement = () => {
       clearInterval(timerRef.current)
     }
     return () => clearInterval(timerRef.current)
-  }, [isRunning, processes, runningProcess, readyQueue, currentTime, algorithm])
+  }, [isRunning, timeStep, algorithm, quantum]) // Only recreate on config changes
 
   const tick = () => {
-    setCurrentTime(prev => prev + 1)
-    
-    let nextLogs: TraceLog[] = []
-    
-    // Use functional updaters but keep them flat
-    setProcesses(prevProcesses => {
-      const updatedProcesses = prevProcesses.map(p => ({ ...p }))
-      
-      // 1. Arrival Logic
-      updatedProcesses.forEach(p => {
-        if (p.arrivalTime === currentTime && p.state === 'new') {
+    setSimState(prev => {
+      const nextTime = prev.currentTime + 1
+      const nextProcesses = prev.processes.map(p => ({ ...p }))
+      let nextReadyQueue = [...prev.readyQueue]
+      let nextRunning = prev.runningProcess ? { ...prev.runningProcess } : null
+      let nextGanttData = [...prev.ganttData]
+      let nextLogs: TraceLog[] = []
+
+      // 1. Handle Arrivals
+      nextProcesses.forEach(p => {
+        if (p.arrivalTime === prev.currentTime && p.state === 'new') {
           p.state = 'ready'
-          nextLogs.push({ id: `arr-${p.id}-${currentTime}`, timestamp: new Date().toISOString().split('T')[1].slice(0, 11), code: `enqueue(ready_queue, P${p.id});`, explanation: `Process ${p.name} arrived at Time ${currentTime}.` })
+          nextReadyQueue.push({ ...p })
+          nextLogs.push({ 
+            id: `arr-${p.id}-${prev.currentTime}`, 
+            timestamp: new Date().toISOString().split('T')[1].slice(0, 11), 
+            code: `enqueue(ready_queue, P${p.id});`, 
+            explanation: `Process ${p.name} arrived at Time ${prev.currentTime}.` 
+          })
         }
       })
 
-      // 2. Scheduler & Execution Logic
-      setRunningProcess(prevRunning => {
-        let currentRunning = prevRunning ? { ...prevRunning } : null
-        
-        setReadyQueue(prevReady => {
-          let updatedReady = [...prevReady]
-          // Sync readyQueue with any changes from arrival logic
-          const newlyReady = updatedProcesses.filter(p => p.state === 'ready' && !prevReady.find(r => r.id === p.id) && (!prevRunning || prevRunning.id !== p.id))
-          newlyReady.forEach(p => { if(!updatedReady.find(r => r.id === p.id)) updatedReady.push({ ...p }) })
-
-          setGanttData(prevGantt => {
-            const updatedGantt = prevGantt.map(g => ({ ...g }))
-
-            if (!currentRunning && updatedReady.length > 0) {
-              const picked = getNextProcess(updatedReady, algorithm)
-              if (picked) {
-                currentRunning = { ...picked, state: 'running' }
-                updatedReady = updatedReady.filter(p => p.id !== picked.id)
-                quantumRef.current = 0
-                nextLogs.push({ id: `sched-${picked.id}-${currentTime}`, timestamp: new Date().toISOString().split('T')[1].slice(0, 11), code: `dispatch(P${picked.id}, ${algorithm});`, explanation: `Scheduler selected Process ${picked.id}.` })
-                updatedGantt.push({ pid: picked.id, start: currentTime, end: currentTime + 1, color: picked.color })
-              }
-            } else if (currentRunning) {
-              currentRunning.remainingTime -= 1
-              if (updatedGantt.length > 0) updatedGantt[updatedGantt.length - 1].end = currentTime + 1
-              quantumRef.current += 1
-
-              if (currentRunning.remainingTime <= 0) {
-                const finishedId = currentRunning.id
-                currentRunning.state = 'terminated'
-                currentRunning.finishTime = currentTime + 1
-                currentRunning.turnaroundTime = currentRunning.finishTime - currentRunning.arrivalTime
-                currentRunning.waitingTime = currentRunning.turnaroundTime - currentRunning.burstTime
-                
-                // Update main list
-                const idx = updatedProcesses.findIndex(px => px.id === finishedId)
-                if (idx !== -1) updatedProcesses[idx] = { ...currentRunning }
-                
-                currentRunning = null
-                quantumRef.current = 0
-                nextLogs.push({ id: `term-${finishedId}-${currentTime}`, timestamp: new Date().toISOString().split('T')[1].slice(0, 11), code: `exit(P${finishedId});`, explanation: `Process ${finishedId} completed.` })
-              } else if (algorithm === 'RR' && quantumRef.current >= quantum) {
-                const tid = currentRunning.id
-                currentRunning.state = 'ready'
-                updatedReady.push({ ...currentRunning })
-                
-                const idx = updatedProcesses.findIndex(px => px.id === tid)
-                if (idx !== -1) updatedProcesses[idx] = { ...currentRunning }
-
-                currentRunning = null
-                quantumRef.current = 0
-                nextLogs.push({ id: `preempt-${tid}-${currentTime}`, timestamp: new Date().toISOString().split('T')[1].slice(0, 11), code: `preempt(P${tid});`, explanation: `Time Quantum expired for P${tid}.` })
-              }
-            }
-            return updatedGantt
+      // 2. Execution Logic
+      if (!nextRunning && nextReadyQueue.length > 0) {
+        // Scheduler Pick
+        const picked = getNextProcess(nextReadyQueue, algorithm)
+        if (picked) {
+          nextRunning = { ...picked, state: 'running' }
+          nextReadyQueue = nextReadyQueue.filter(p => p.id !== picked.id)
+          quantumRef.current = 0
+          nextLogs.push({ 
+            id: `sched-${picked.id}-${prev.currentTime}`, 
+            timestamp: new Date().toISOString().split('T')[1].slice(0, 11), 
+            code: `dispatch(P${picked.id}, ${algorithm});`, 
+            explanation: `Scheduler selected Process ${picked.id}.` 
           })
+          nextGanttData.push({ pid: picked.id, start: prev.currentTime, end: nextTime, color: picked.color })
+        }
+      } else if (nextRunning) {
+        // Continue Execution
+        nextRunning.remainingTime -= 1
+        if (nextGanttData.length > 0) nextGanttData[nextGanttData.length - 1].end = nextTime
+        quantumRef.current += 1
 
-          return updatedReady
-        })
+        // Check Termination
+        if (nextRunning.remainingTime <= 0) {
+          nextRunning.state = 'terminated'
+          nextRunning.finishTime = nextTime
+          nextRunning.turnaroundTime = nextRunning.finishTime - nextRunning.arrivalTime
+          nextRunning.waitingTime = nextRunning.turnaroundTime - nextRunning.burstTime
+          
+          // Update in main list
+          const idx = nextProcesses.findIndex(px => px.id === nextRunning!.id)
+          if (idx !== -1) nextProcesses[idx] = { ...nextRunning }
+          
+          nextLogs.push({ 
+            id: `term-${nextRunning.id}-${prev.currentTime}`, 
+            timestamp: new Date().toISOString().split('T')[1].slice(0, 11), 
+            code: `exit(P${nextRunning.id});`, 
+            explanation: `Process ${nextRunning.id} completed at Time ${nextTime}.` 
+          })
+          nextRunning = null
+          quantumRef.current = 0
+        } 
+        // Check Preemption (RR)
+        else if (algorithm === 'RR' && quantumRef.current >= quantum) {
+          nextRunning.state = 'ready'
+          nextReadyQueue.push({ ...nextRunning })
+          
+          const idx = nextProcesses.findIndex(px => px.id === nextRunning!.id)
+          if (idx !== -1) nextProcesses[idx] = { ...nextRunning }
 
-        return currentRunning
-      })
+          nextLogs.push({ 
+            id: `preempt-${nextRunning.id}-${prev.currentTime}`, 
+            timestamp: new Date().toISOString().split('T')[1].slice(0, 11), 
+            code: `preempt(P${nextRunning.id});`, 
+            explanation: `Time Quantum expired for P${nextRunning.id}.` 
+          })
+          nextRunning = null
+          quantumRef.current = 0
+        }
+      }
 
-      return updatedProcesses
+      // Sync logs separately or return them?
+      // Since logs are separate state, we can use a side effect or functional update
+      if (nextLogs.length > 0) {
+        setLogs(prevLogs => [...prevLogs.slice(-(20 - nextLogs.length)), ...nextLogs])
+      }
+
+      return {
+        processes: nextProcesses,
+        runningProcess: nextRunning,
+        readyQueue: nextReadyQueue,
+        currentTime: nextTime,
+        ganttData: nextGanttData,
+      }
     })
-
-    if (nextLogs.length > 0) {
-      setLogs(prev => [...prev.slice(-(20 - nextLogs.length)), ...nextLogs])
-    }
   }
 
   // Form State
@@ -141,16 +161,18 @@ export const ProcessManagement = () => {
 
   const resetSim = () => {
     setIsRunning(false)
-    setCurrentTime(0)
     quantumRef.current = 0
-    setProcesses([
-      { id: 1, name: 'Browser', arrivalTime: 0, burstTime: 6, remainingTime: 6, priority: 1, state: 'new', color: '#00f3ff', waitingTime: 0, turnaroundTime: 0 },
-      { id: 2, name: 'System', arrivalTime: 2, burstTime: 4, remainingTime: 4, priority: 0, state: 'new', color: '#9d00ff', waitingTime: 0, turnaroundTime: 0 },
-      { id: 3, name: 'Editor', arrivalTime: 4, burstTime: 3, remainingTime: 3, priority: 2, state: 'new', color: '#ff004c', waitingTime: 0, turnaroundTime: 0 },
-    ])
-    setRunningProcess(null)
-    setReadyQueue([])
-    setGanttData([])
+    setSimState({
+      processes: [
+        { id: 1, name: 'Browser', arrivalTime: 0, burstTime: 6, remainingTime: 6, priority: 1, state: 'new', color: '#00f3ff', waitingTime: 0, turnaroundTime: 0 },
+        { id: 2, name: 'System', arrivalTime: 2, burstTime: 4, remainingTime: 4, priority: 0, state: 'new', color: '#9d00ff', waitingTime: 0, turnaroundTime: 0 },
+        { id: 3, name: 'Editor', arrivalTime: 4, burstTime: 3, remainingTime: 3, priority: 2, state: 'new', color: '#ff004c', waitingTime: 0, turnaroundTime: 0 },
+      ],
+      runningProcess: null,
+      readyQueue: [],
+      currentTime: 0,
+      ganttData: [],
+    })
     setLogs([])
   }
 
@@ -178,7 +200,7 @@ export const ProcessManagement = () => {
       color: ['#00f3ff', '#9d00ff', '#ff004c', '#00ff8a', '#ff8a00'][newId % 5],
       waitingTime: 0, turnaroundTime: 0
     }
-    setProcesses([...processes, p])
+    setSimState(prev => ({ ...prev, processes: [...prev.processes, p] }))
     setShowAddForm(false)
     
     // Reset form
@@ -368,7 +390,7 @@ export const ProcessManagement = () => {
                  <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
                  <h4 className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-slate-500 mb-8">CPU_SOCKET_0</h4>
                  
-                 <div className="flex flex-col items-center gap-6 py-6">
+                 <div className="flex flex-col items-center gap-6 py-6" style={{ minHeight: '160px' }}>
                     {runningProcess ? (
                       <motion.div 
                         layoutId={`p-${runningProcess.id}`}
@@ -386,6 +408,8 @@ export const ProcessManagement = () => {
                                stroke="currentColor" 
                                strokeWidth="2" 
                                className="text-primary opacity-20"
+                               strokeDasharray="427"
+                               strokeDashoffset={427 - (427 * (runningProcess.burstTime - runningProcess.remainingTime)) / runningProcess.burstTime}
                             />
                          </svg>
                       </motion.div>
@@ -482,7 +506,7 @@ export const ProcessManagement = () => {
       </div>
       
       {/* Live Code Tracer */}
-      {isRunning && <LiveCodeTracer logs={logs} />}
+      <LiveCodeTracer logs={logs} />
 
       <AlgorithmDeepDive algorithm={algorithm} />
     </div>
