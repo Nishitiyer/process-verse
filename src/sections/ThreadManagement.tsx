@@ -13,34 +13,25 @@ import {
 } from 'lucide-react'
 import { AlgorithmDeepDive } from '../components/AlgorithmDeepDive'
 import { LiveCodeTracer, TraceLog } from '../components/LiveCodeTracer'
+import { getNextThread, ThreadSchedulingAlgorithm, Thread as ThreadType } from '../logic/threadSim'
 
 const THREAD_COLORS = ['#00f3ff', '#9d00ff', '#ff004c', '#00ff8a', '#ff8a00']
 
-interface Thread {
-  id: number
-  state: 'running' | 'ready' | 'blocked' | 'terminated'
-  priority: number
-  color: string
-  progress: number
-  arrivalTime: number
-  finishTime?: number
-  waitingTime: number
-  turnaroundTime: number
-  burstTime: number
-}
+export type Thread = ThreadType;
 
 export const ThreadManagement = () => {
   // Unified Simulation State
   const [simState, setSimState] = useState({
-    threads: [
-      { id: 1, state: 'ready', priority: 1, color: THREAD_COLORS[0], progress: 0, arrivalTime: 0, waitingTime: 0, turnaroundTime: 0, burstTime: 20 },
-      { id: 2, state: 'ready', priority: 0, color: THREAD_COLORS[1], progress: 0, arrivalTime: 0, waitingTime: 0, turnaroundTime: 0, burstTime: 20 },
-    ] as Thread[],
+    threads: [] as Thread[],
     isRunning: false,
     currentTime: 0,
     cpuUsage: 0,
-    nextId: 3, // Global counter for unique IDs
+    nextId: 1, // Global counter for unique IDs
   })
+
+  const [algorithm, setAlgorithm] = useState<ThreadSchedulingAlgorithm>('FCFS')
+  const [quantum, setQuantum] = useState(2)
+  const quantumRef = useRef(0)
 
   const { threads, isRunning, currentTime, cpuUsage } = simState
   const [logs, setLogs] = useState<TraceLog[]>([])
@@ -56,20 +47,26 @@ export const ThreadManagement = () => {
       const runningIdx = nextThreads.findIndex(t => t.state === 'running')
       
       if (runningIdx === -1) {
-        const readyIdx = nextThreads.findIndex(t => t.state === 'ready')
-        if (readyIdx !== -1) {
-          nextThreads[readyIdx].state = 'running'
+        // Scheduler Pick
+        const picked = getNextThread(nextThreads, algorithm);
+        if (picked) {
+          const idx = nextThreads.findIndex(t => t.id === picked.id);
+          nextThreads[idx].state = 'running'
+          quantumRef.current = 0
           nextLogs.push({ 
-            id: `run-${nextThreads[readyIdx].id}-${nextTime}`, 
+            id: `run-${nextThreads[idx].id}-${nextTime}`, 
             timestamp: new Date().toISOString().split('T')[1].slice(0, 11), 
-            code: `pthread_mutex_lock(&cpu_lock);`, 
-            explanation: `Thread ${nextThreads[readyIdx].id} is now Running.` 
+            code: `pthread_mutex_lock(&cpu_lock); // Dispatch T${nextThreads[idx].id}`, 
+            explanation: `Thread ${nextThreads[idx].id} scheduled using ${algorithm}.` 
           })
         }
       } else {
         const t = nextThreads[runningIdx]
-        t.progress += 5
-        if (t.progress >= 100) {
+        t.progress += (100 / t.burstTime) // Using burstTime for progress
+        t.remainingTime = Math.max(0, t.remainingTime - 1)
+        quantumRef.current += 1
+
+        if (t.remainingTime <= 0) {
           t.state = 'terminated'
           t.progress = 100
           t.finishTime = nextTime
@@ -78,9 +75,19 @@ export const ThreadManagement = () => {
           nextLogs.push({ 
             id: `term-${t.id}-${nextTime}`, 
             timestamp: new Date().toISOString().split('T')[1].slice(0, 11), 
-            code: `pthread_exit(NULL);`, 
-            explanation: `Thread ${t.id} finished at Time ${nextTime}.` 
+            code: `pthread_exit(NULL); // Terminated`, 
+            explanation: `Thread ${t.id} completed at Time ${nextTime}.` 
           })
+          quantumRef.current = 0
+        } else if (algorithm === 'RR' && quantumRef.current >= quantum) {
+          t.state = 'ready'
+          nextLogs.push({ 
+            id: `preempt-${t.id}-${nextTime}`, 
+            timestamp: new Date().toISOString().split('T')[1].slice(0, 11), 
+            code: `pthread_yield(); // Preempted (RR)`, 
+            explanation: `Time Slice expired for Thread ${t.id}.` 
+          })
+          quantumRef.current = 0
         }
       }
 
@@ -99,12 +106,12 @@ export const ThreadManagement = () => {
 
   useEffect(() => {
     if (isRunning) {
-      timerRef.current = setInterval(tick, 200)
+      timerRef.current = setInterval(tick, 500) // Slower for visibility
     } else {
       clearInterval(timerRef.current)
     }
     return () => clearInterval(timerRef.current)
-  }, [isRunning])
+  }, [isRunning, algorithm, quantum])
 
   useEffect(() => {
     const hp = () => setSimState(s => ({ ...s, isRunning: !s.isRunning }))
@@ -117,18 +124,27 @@ export const ThreadManagement = () => {
     }
   }, [])
 
-  const addThread = () => {
+  // Form State
+  const [showAddForm, setShowAddForm] = useState(false)
+  const [newBurst, setNewBurst] = useState(4)
+  const [newPriority, setNewPriority] = useState(1)
+  const [newArrivalTime, setNewArrivalTime] = useState(simState.currentTime)
+
+  const submitThread = () => {
     setSimState(prev => {
       const newThread: Thread = {
         id: prev.nextId,
+        processId: 1,
         state: 'ready',
-        priority: Math.floor(Math.random() * 3),
+        priority: Number(newPriority),
         color: THREAD_COLORS[prev.nextId % THREAD_COLORS.length],
         progress: 0,
-        arrivalTime: prev.currentTime,
+        arrivalTime: Number(newArrivalTime),
         waitingTime: 0,
         turnaroundTime: 0,
-        burstTime: 20
+        burstTime: Number(newBurst),
+        remainingTime: Number(newBurst),
+        load: Number(newBurst),
       }
       return {
         ...prev,
@@ -136,26 +152,28 @@ export const ThreadManagement = () => {
         nextId: prev.nextId + 1
       }
     })
-    
-    // Auto-scroll to bottom of list
-    setTimeout(() => {
-      if (listRef.current) {
-        listRef.current.scrollTop = listRef.current.scrollHeight
-      }
-    }, 100)
+    setShowAddForm(false)
+    setNewBurst(4)
+    setNewPriority(1)
+    setNewArrivalTime(currentTime)
+  }
+
+  const cycleAlgorithm = () => {
+    const algos: ThreadSchedulingAlgorithm[] = ['FCFS', 'SJF', 'Priority', 'RR']
+    const nextIdx = (algos.indexOf(algorithm) + 1) % algos.length
+    setAlgorithm(algos[nextIdx])
+    resetThreads()
   }
 
   const resetThreads = () => {
     setLogs([])
+    quantumRef.current = 0
     setSimState({
-      threads: [
-        { id: 1, state: 'ready', priority: 1, color: THREAD_COLORS[0], progress: 0, arrivalTime: 0, waitingTime: 0, turnaroundTime: 0, burstTime: 20 },
-        { id: 2, state: 'ready', priority: 0, color: THREAD_COLORS[1], progress: 0, arrivalTime: 0, waitingTime: 0, turnaroundTime: 0, burstTime: 20 },
-      ],
+      threads: [],
       isRunning: false,
       currentTime: 0,
       cpuUsage: 0,
-      nextId: 3
+      nextId: 1
     })
   }
 
@@ -209,14 +227,81 @@ export const ThreadManagement = () => {
               </div>
 
               <div className="space-y-6">
-                 <button 
-                    onClick={addThread} 
-                    id="spawn-thread-btn"
-                    className="w-full btn-secondary flex items-center justify-center gap-3 py-5 text-xs font-black uppercase tracking-widest hover:shadow-[0_0_25px_rgba(157,0,255,0.4)] active:scale-95 z-20"
-                 >
-                    <Plus size={18} />
-                    SPAWN NEW THREAD
-                 </button>
+                 {!showAddForm ? (
+                   <button 
+                      onClick={() => setShowAddForm(true)} 
+                      id="spawn-thread-btn"
+                      className="w-full btn-secondary flex items-center justify-center gap-3 py-5 text-xs font-black uppercase tracking-widest hover:shadow-[0_0_25px_rgba(157,0,255,0.4)] active:scale-95"
+                   >
+                      <Plus size={18} />
+                      SPAWN NEW THREAD
+                   </button>
+                 ) : (
+                    <div className="p-6 rounded-3xl bg-white/[0.02] border border-secondary/20 space-y-4 shadow-[0_0_20px_rgba(157,0,255,0.05)]">
+                       <div className="flex items-center justify-between">
+                          <span className="text-[10px] uppercase font-bold text-slate-400">Arrival Time</span>
+                          <div className="flex items-center gap-3">
+                            <button onClick={() => setNewArrivalTime(Math.max(0, newArrivalTime - 1))} className="w-6 h-6 rounded bg-white/5 hover:bg-white/10 flex items-center justify-center font-bold text-slate-300">-</button>
+                            <input 
+                              type="number" 
+                              value={newArrivalTime} 
+                              onChange={(e) => setNewArrivalTime(parseInt(e.target.value) || 0)}
+                              className="w-12 bg-transparent text-center font-mono text-secondary font-bold focus:outline-none"
+                            />
+                            <button onClick={() => setNewArrivalTime(newArrivalTime + 1)} className="w-6 h-6 rounded bg-white/5 hover:bg-white/10 flex items-center justify-center font-bold text-slate-300">+</button>
+                          </div>
+                       </div>
+                       <div className="flex items-center justify-between">
+                          <span className="text-[10px] uppercase font-bold text-slate-400">Burst Time (T)</span>
+                          <div className="flex items-center gap-3">
+                            <button onClick={() => setNewBurst(Math.max(1, newBurst - 1))} className="w-6 h-6 rounded bg-white/5 hover:bg-white/10 flex items-center justify-center font-bold text-slate-300">-</button>
+                            <input 
+                              type="number" 
+                              value={newBurst} 
+                              onChange={(e) => setNewBurst(parseInt(e.target.value) || 1)}
+                              className="w-12 bg-transparent text-center font-mono text-secondary font-bold focus:outline-none"
+                            />
+                            <button onClick={() => setNewBurst(newBurst + 1)} className="w-6 h-6 rounded bg-white/5 hover:bg-white/10 flex items-center justify-center font-bold text-slate-300">+</button>
+                          </div>
+                       </div>
+                       <div className="flex items-center justify-between">
+                          <span className="text-[10px] uppercase font-bold text-slate-400">Priority (0=High)</span>
+                          <div className="flex items-center gap-3">
+                            <button onClick={() => setNewPriority(Math.max(0, newPriority - 1))} className="w-6 h-6 rounded bg-white/5 hover:bg-white/10 flex items-center justify-center font-bold text-slate-300">-</button>
+                            <input 
+                              type="number" 
+                              value={newPriority} 
+                              onChange={(e) => setNewPriority(parseInt(e.target.value) || 0)}
+                              className="w-12 bg-transparent text-center font-mono text-accent font-bold focus:outline-none"
+                            />
+                            <button onClick={() => setNewPriority(newPriority + 1)} className="w-6 h-6 rounded bg-white/5 hover:bg-white/10 flex items-center justify-center font-bold text-slate-300">+</button>
+                          </div>
+                       </div>
+                       <div className="flex gap-2 pt-2">
+                          <button onClick={() => setShowAddForm(false)} className="flex-1 py-2 rounded-xl border border-white/10 text-xs font-bold text-slate-400 hover:text-white hover:bg-white/5">Cancel</button>
+                          <button onClick={submitThread} className="flex-1 py-2 rounded-xl bg-secondary text-white text-xs font-black uppercase tracking-widest hover:shadow-[0_0_15px_rgba(157,0,255,0.4)]">Deploy</button>
+                       </div>
+                    </div>
+                 )}
+
+                 <div className="p-6 rounded-3xl bg-black/40 border border-white/5 space-y-4">
+                    <div className="flex justify-between items-center text-[10px] uppercase font-bold text-slate-500 tracking-widest">
+                       <span>Scheduler</span>
+                       <button onClick={cycleAlgorithm} className="text-secondary font-mono bg-secondary/10 px-3 py-1.5 rounded hover:bg-secondary/20 transition-colors cursor-pointer">
+                          {algorithm}
+                       </button>
+                    </div>
+                    {algorithm === 'RR' && (
+                       <div className="flex justify-between items-center text-[10px] uppercase font-bold text-slate-500 tracking-widest">
+                          <span>Time Slice</span>
+                          <div className="flex items-center gap-1.5">
+                            <button onClick={() => setQuantum(Math.max(1, quantum - 1))} className="w-5 h-5 rounded hover:bg-white/10 flex items-center justify-center text-slate-400 font-bold">-</button>
+                            <span className="text-secondary font-mono bg-secondary/10 px-2 py-0.5 rounded">{quantum}T</span>
+                            <button onClick={() => setQuantum(quantum + 1)} className="w-5 h-5 rounded hover:bg-white/10 flex items-center justify-center text-slate-400 font-bold">+</button>
+                          </div>
+                       </div>
+                    )}
+                 </div>
 
                  <div className="p-8 rounded-[2rem] bg-black/40 border border-white/5 relative overflow-hidden group">
                     <div className="absolute top-0 left-0 w-1 h-full bg-secondary shadow-[0_0_15px_rgba(157,0,255,0.5)]" />

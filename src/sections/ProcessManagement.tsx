@@ -18,11 +18,7 @@ import { LiveCodeTracer, TraceLog } from '../components/LiveCodeTracer'
 export const ProcessManagement = () => {
   // Unified Simulation State
   const [simState, setSimState] = useState({
-    processes: [
-      { id: 1, name: 'Browser', arrivalTime: 0, burstTime: 6, remainingTime: 6, priority: 1, state: 'new', color: '#00f3ff', waitingTime: 0, turnaroundTime: 0 },
-      { id: 2, name: 'System', arrivalTime: 2, burstTime: 4, remainingTime: 4, priority: 0, state: 'new', color: '#9d00ff', waitingTime: 0, turnaroundTime: 0 },
-      { id: 3, name: 'Editor', arrivalTime: 4, burstTime: 3, remainingTime: 3, priority: 2, state: 'new', color: '#ff004c', waitingTime: 0, turnaroundTime: 0 },
-    ] as Process[],
+    processes: [] as Process[],
     runningProcess: null as Process | null,
     readyQueue: [] as Process[],
     currentTime: 0,
@@ -155,6 +151,7 @@ export const ProcessManagement = () => {
 
   // Form State
   const [showAddForm, setShowAddForm] = useState(false)
+  const [newName, setNewName] = useState('')
   const [newBurst, setNewBurst] = useState(4)
   const [newPriority, setNewPriority] = useState(1)
   const [newArrivalTime, setNewArrivalTime] = useState(0)
@@ -163,11 +160,7 @@ export const ProcessManagement = () => {
     setIsRunning(false)
     quantumRef.current = 0
     setSimState({
-      processes: [
-        { id: 1, name: 'Browser', arrivalTime: 0, burstTime: 6, remainingTime: 6, priority: 1, state: 'new', color: '#00f3ff', waitingTime: 0, turnaroundTime: 0 },
-        { id: 2, name: 'System', arrivalTime: 2, burstTime: 4, remainingTime: 4, priority: 0, state: 'new', color: '#9d00ff', waitingTime: 0, turnaroundTime: 0 },
-        { id: 3, name: 'Editor', arrivalTime: 4, burstTime: 3, remainingTime: 3, priority: 2, state: 'new', color: '#ff004c', waitingTime: 0, turnaroundTime: 0 },
-      ],
+      processes: [],
       runningProcess: null,
       readyQueue: [],
       currentTime: 0,
@@ -191,11 +184,11 @@ export const ProcessManagement = () => {
     const newId = processes.length + 1
     const p: Process = {
       id: newId,
-      name: `Task-${newId}`,
-      arrivalTime: newArrivalTime,
-      burstTime: newBurst,
-      remainingTime: newBurst,
-      priority: newPriority,
+      name: newName || `Task-${newId}`,
+      arrivalTime: Number(newArrivalTime),
+      burstTime: Number(newBurst),
+      remainingTime: Number(newBurst),
+      priority: Number(newPriority),
       state: 'new',
       color: ['#00f3ff', '#9d00ff', '#ff004c', '#00ff8a', '#ff8a00'][newId % 5],
       waitingTime: 0, turnaroundTime: 0
@@ -204,6 +197,7 @@ export const ProcessManagement = () => {
     setShowAddForm(false)
     
     // Reset form
+    setNewName('')
     setNewBurst(4)
     setNewPriority(1)
     setNewArrivalTime(currentTime)
@@ -267,11 +261,26 @@ export const ProcessManagement = () => {
                    </button>
                  ) : (
                    <div className="p-6 rounded-3xl bg-white/[0.02] border border-primary/20 space-y-4 shadow-[0_0_20px_rgba(0,243,255,0.05)]">
-                      <div className="flex items-center justify-between">
+                       <div className="space-y-1">
+                          <label className="text-[10px] uppercase font-bold text-slate-400 px-1">Process Alias</label>
+                          <input 
+                            type="text" 
+                            value={newName} 
+                            onChange={(e) => setNewName(e.target.value)}
+                            placeholder="e.g. Chrome Engine"
+                            className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2 text-xs focus:outline-none focus:border-primary/50 text-white"
+                          />
+                       </div>
+                       <div className="flex items-center justify-between">
                           <span className="text-[10px] uppercase font-bold text-slate-400">Arrival Time</span>
                           <div className="flex items-center gap-3">
                             <button onClick={() => setNewArrivalTime(Math.max(0, newArrivalTime - 1))} className="w-6 h-6 rounded bg-white/5 hover:bg-white/10 flex items-center justify-center font-bold text-slate-300">-</button>
-                            <span className="font-mono text-primary font-bold w-4 text-center">{newArrivalTime}</span>
+                            <input 
+                              type="number" 
+                              value={newArrivalTime} 
+                              onChange={(e) => setNewArrivalTime(parseInt(e.target.value) || 0)}
+                              className="w-12 bg-transparent text-center font-mono text-primary font-bold focus:outline-none"
+                            />
                             <button onClick={() => setNewArrivalTime(newArrivalTime + 1)} className="w-6 h-6 rounded bg-white/5 hover:bg-white/10 flex items-center justify-center font-bold text-slate-300">+</button>
                           </div>
                        </div>
@@ -279,7 +288,12 @@ export const ProcessManagement = () => {
                           <span className="text-[10px] uppercase font-bold text-slate-400">Burst Time (T)</span>
                           <div className="flex items-center gap-3">
                             <button onClick={() => setNewBurst(Math.max(1, newBurst - 1))} className="w-6 h-6 rounded bg-white/5 hover:bg-white/10 flex items-center justify-center font-bold text-slate-300">-</button>
-                            <span className="font-mono text-primary font-bold w-4 text-center">{newBurst}</span>
+                            <input 
+                              type="number" 
+                              value={newBurst} 
+                              onChange={(e) => setNewBurst(parseInt(e.target.value) || 1)}
+                              className="w-12 bg-transparent text-center font-mono text-primary font-bold focus:outline-none"
+                            />
                             <button onClick={() => setNewBurst(newBurst + 1)} className="w-6 h-6 rounded bg-white/5 hover:bg-white/10 flex items-center justify-center font-bold text-slate-300">+</button>
                           </div>
                        </div>
@@ -287,7 +301,12 @@ export const ProcessManagement = () => {
                           <span className="text-[10px] uppercase font-bold text-slate-400">Priority (0=High)</span>
                           <div className="flex items-center gap-3">
                             <button onClick={() => setNewPriority(Math.max(0, newPriority - 1))} className="w-6 h-6 rounded bg-white/5 hover:bg-white/10 flex items-center justify-center font-bold text-slate-300">-</button>
-                            <span className="font-mono text-accent font-bold w-4 text-center">{newPriority}</span>
+                            <input 
+                              type="number" 
+                              value={newPriority} 
+                              onChange={(e) => setNewPriority(parseInt(e.target.value) || 0)}
+                              className="w-12 bg-transparent text-center font-mono text-accent font-bold focus:outline-none"
+                            />
                             <button onClick={() => setNewPriority(newPriority + 1)} className="w-6 h-6 rounded bg-white/5 hover:bg-white/10 flex items-center justify-center font-bold text-slate-300">+</button>
                           </div>
                        </div>
