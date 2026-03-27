@@ -112,17 +112,21 @@ export const LearnPanel = ({ onNavigate }: LearnPanelProps) => {
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.1 }}
-            className="glass-card flex flex-col gap-10 group cursor-pointer hover:border-primary/30 transition-all active:scale-[0.98]"
-            onClick={() => setSelectedAlgo(c.defaultAlgo)}
+            className="glass-card flex flex-col gap-10 group cursor-pointer hover:border-primary/30 transition-all active:scale-[0.98] relative z-20 pointer-events-auto"
+            onClick={() => {
+              console.log(`Academy: Opening deep dive for ${c.defaultAlgo}`);
+              setSelectedAlgo(c.defaultAlgo);
+            }}
           >
-             <div className="flex items-center justify-between">
-                <div className={`p-5 rounded-3xl ${c.bg} ${c.color} shadow-inner`}>
+             <div className="flex items-center justify-between pointer-events-none">
+                <div className={`p-5 rounded-3xl ${c.bg} ${c.color} shadow-inner pointer-events-auto`}>
                    <c.icon size={32} />
                 </div>
                 <div 
-                  className="p-3 rounded-2xl glass border-white/5 text-slate-600 group-hover:text-primary transition-colors hover:bg-white/5"
+                  className="p-3 rounded-2xl glass border-white/5 text-slate-600 group-hover:text-primary transition-colors hover:bg-white/5 pointer-events-auto relative z-30"
                   onClick={(e) => {
                     e.stopPropagation();
+                    console.log(`Academy: Navigating to ${c.id}`);
                     onNavigate(c.id);
                   }}
                   title={`Open ${c.title} Simulator`}
