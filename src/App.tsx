@@ -155,7 +155,7 @@ function App() {
           {activeSection === 'deadlocks' && <DeadlockSimulator />}
           {activeSection === 'sync' && <SynchronizationLab />}
           {activeSection === 'performance' && <PerformanceGraphs />}
-          {activeSection === 'learn' && <LearnPanel />}
+          {activeSection === 'learn' && <LearnPanel onNavigate={setActiveSection} />}
           {!navItems.find(n => n.id === activeSection) && <Dashboard onStart={() => setActiveSection('processes')} />}
         </div>
       </main>

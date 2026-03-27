@@ -12,43 +12,76 @@ import {
   Activity,
   Layers
 } from 'lucide-react'
+import { AlgorithmDeepDive, OSAlgorithm } from '../components/AlgorithmDeepDive'
+import { useState } from 'react'
 
 const concepts = [
   {
     title: 'Process Management',
+    id: 'processes',
     icon: Cpu,
     color: 'text-primary',
     bg: 'bg-primary/10',
     desc: 'Learn about PCB, context switching, and scheduling algorithms like FCFS, SJF, and Round Robin.',
-    topics: ['Process Life Cycle', 'Context Switching', 'Scheduling Metrics']
+    topics: ['Process Life Cycle', 'Context Switching', 'Scheduling Metrics'],
+    defaultAlgo: 'FCFS' as OSAlgorithm
   },
   {
     title: 'Thread Engineering',
+    id: 'threads',
     icon: GitBranch,
     color: 'text-secondary',
     bg: 'bg-secondary/10',
     desc: 'Explore Light Weight Processes (LWP), kernel-level vs user-level threads, and multi-core execution.',
-    topics: ['Hyperthreading', 'Thread Pools', 'Race Conditions']
+    topics: ['Hyperthreading', 'Thread Pools', 'Race Conditions'],
+    defaultAlgo: 'Threads' as OSAlgorithm
   },
   {
     title: 'Deadlock Control',
+    id: 'deadlocks',
     icon: Lock,
     color: 'text-accent',
     bg: 'bg-accent/10',
     desc: 'Understand the four necessary conditions for deadlock and the Banker\'s avoidance algorithm.',
-    topics: ['Mutual Exclusion', 'Circular Wait', 'Safe States']
+    topics: ['Mutual Exclusion', 'Circular Wait', 'Safe States'],
+    defaultAlgo: 'Banker' as OSAlgorithm
   },
   {
     title: 'Sync Mechanisms',
+    id: 'sync',
     icon: RefreshCcw,
     color: 'text-green-500',
     bg: 'bg-green-500/10',
     desc: 'Master semaphores, mutexes, and monitors. Solve the Dining Philosophers and Producer-Consumer problems.',
-    topics: ['Atomic Operations', 'Critical Sections', 'Condition Variables']
+    topics: ['Atomic Operations', 'Critical Sections', 'Condition Variables'],
+    defaultAlgo: 'producer-consumer' as OSAlgorithm
   }
 ]
 
-export const LearnPanel = () => {
+interface LearnPanelProps {
+  onNavigate: (section: string) => void
+}
+
+export const LearnPanel = ({ onNavigate }: LearnPanelProps) => {
+  const [selectedAlgo, setSelectedAlgo] = useState<OSAlgorithm | null>(null)
+
+  if (selectedAlgo) {
+    return (
+      <div className="p-12 max-w-7xl mx-auto space-y-8">
+        <button 
+          onClick={() => setSelectedAlgo(null)}
+          className="flex items-center gap-2 text-slate-500 hover:text-white transition-colors uppercase font-black text-[10px] tracking-[0.3em] group"
+        >
+          <div className="p-2 rounded-xl bg-white/5 border border-white/10 group-hover:border-primary/50 transition-all">
+             <ChevronRight className="rotate-180" size={16} />
+          </div>
+          Back to Academy
+        </button>
+        <AlgorithmDeepDive algorithm={selectedAlgo} />
+      </div>
+    )
+  }
+
   return (
     <div className="p-12 space-y-16 max-w-7xl mx-auto custom-scrollbar">
       {/* Header */}
@@ -79,14 +112,21 @@ export const LearnPanel = () => {
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.1 }}
-            className="glass-card flex flex-col gap-10 group"
+            className="glass-card flex flex-col gap-10 group cursor-pointer hover:border-primary/30 transition-all active:scale-[0.98]"
+            onClick={() => setSelectedAlgo(c.defaultAlgo)}
           >
              <div className="flex items-center justify-between">
                 <div className={`p-5 rounded-3xl ${c.bg} ${c.color} shadow-inner`}>
                    <c.icon size={32} />
                 </div>
-                <div className="p-3 rounded-2xl glass border-white/5 text-slate-600 group-hover:text-primary transition-colors cursor-pointer">
-                   <Maximize2 size={20} className="hidden" />
+                <div 
+                  className="p-3 rounded-2xl glass border-white/5 text-slate-600 group-hover:text-primary transition-colors hover:bg-white/5"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onNavigate(c.id);
+                  }}
+                  title={`Open ${c.title} Simulator`}
+                >
                    <ChevronRight size={24} />
                 </div>
              </div>
@@ -107,7 +147,7 @@ export const LearnPanel = () => {
              </div>
 
              <div className="pt-6 border-t border-white/5 flex items-center justify-between">
-                <span className="text-[10px] font-black uppercase tracking-[0.3em] text-primary/50 group-hover:text-primary transition-colors">Start Module</span>
+                <span className="text-[10px] font-black uppercase tracking-[0.3em] text-primary/50 group-hover:text-primary transition-colors">Start Module Preview</span>
                 <div className="flex gap-1">
                    {[1, 2, 3].map(dot => <div key={dot} className="w-1 h-1 rounded-full bg-slate-800" />)}
                 </div>
@@ -133,19 +173,28 @@ export const LearnPanel = () => {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                {[
-                 'Kernel Synchronization Primitives',
-                 'Advanced Scheduler Architecture',
-                 'Memory Subsystem Engineering',
-                 'Distributed Systems Logic'
+                 { name: 'Kernel Sync Primitives', url: 'https://en.wikipedia.org/wiki/Synchronization_(computer_science)' },
+                 { name: 'Advanced Scheduler Architecture', url: 'https://en.wikipedia.org/wiki/Scheduling_(computing)' },
+                 { name: 'Memory Subsystem Engineering', url: 'https://en.wikipedia.org/wiki/Memory_management_(operating_systems)' },
+                 { name: 'Distributed Systems Logic', url: 'https://en.wikipedia.org/wiki/Distributed_computing' }
                ].map((res) => (
-                 <div key={res} className="p-6 rounded-3xl bg-white/[0.02] border border-white/5 flex items-center justify-between group/res cursor-pointer hover:bg-white/[0.05] transition-all">
-                    <span className="text-xs font-bold text-slate-300 uppercase tracking-widest">{res}</span>
+                 <a 
+                   key={res.name} 
+                   href={res.url}
+                   target="_blank"
+                   rel="noopener noreferrer"
+                   className="p-6 rounded-3xl bg-white/[0.02] border border-white/5 flex items-center justify-between group/res cursor-pointer hover:bg-white/[0.05] transition-all"
+                 >
+                    <span className="text-xs font-bold text-slate-300 uppercase tracking-widest">{res.name}</span>
                     <ExternalLink size={16} className="text-slate-600 group-hover/res:text-primary transition-colors" />
-                 </div>
+                 </a>
                ))}
             </div>
             
-            <button className="btn-primary px-10 py-4 flex items-center gap-3 text-sm">
+            <button 
+              onClick={() => window.open('https://os-book.com/', '_blank')}
+              className="btn-primary px-10 py-4 flex items-center gap-3 text-sm"
+            >
                Open Knowledge Base
                <Zap size={18} fill="currentColor" />
             </button>
