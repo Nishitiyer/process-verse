@@ -57,7 +57,7 @@ function App() {
             </div>
             <div>
               <h1 className="text-xl font-black tracking-tight neon-text-cyan leading-none">PROCESS</h1>
-              <span className="text-[10px] font-bold tracking-[0.3em] text-secondary">VERSE OS v1.0</span>
+              <span className="text-[10px] font-bold tracking-[0.3em] text-secondary">VERSE OS v1.1</span>
             </div>
           </div>
         </div>
