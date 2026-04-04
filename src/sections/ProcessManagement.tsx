@@ -23,17 +23,17 @@ export const ProcessManagement = () => {
     readyQueue: [] as Process[],
     currentTime: 0,
     ganttData: [] as {pid: number, start: number, end: number, color: string}[],
+    logs: [] as TraceLog[],
   })
 
   // Destructure for easier use in JSX
-  const { processes, runningProcess, readyQueue, currentTime, ganttData } = simState
+  const { processes, runningProcess, readyQueue, currentTime, ganttData, logs } = simState
 
   const [algorithm, setAlgorithm] = useState<'FCFS'|'SJF'|'Priority'|'RR'>('FCFS')
   const [quantum, setQuantum] = useState(2)
   const [timeStep] = useState(500) // ms per tick
 
   const [isRunning, setIsRunning] = useState(false)
-  const [logs, setLogs] = useState<TraceLog[]>([])
   const timerRef = useRef<any>(null)
   const quantumRef = useRef(0)
 
@@ -58,16 +58,16 @@ export const ProcessManagement = () => {
       let nextGanttData = [...prev.ganttData]
       let nextLogs: TraceLog[] = []
 
-      // 1. Handle Arrivals
+      // 1. Handle Arrivals (Enhanced logic to catch processes added "late" or with past arrival times)
       nextProcesses.forEach(p => {
-        if (p.arrivalTime === prev.currentTime && p.state === 'new') {
+        if (p.arrivalTime <= prev.currentTime && p.state === 'new') {
           p.state = 'ready'
           nextReadyQueue.push({ ...p })
           nextLogs.push({ 
-            id: `arr-${p.id}-${prev.currentTime}`, 
+            id: `arr-${p.id}-${prev.currentTime}-${Math.random().toString(36).substr(2, 5)}`, 
             timestamp: new Date().toISOString().split('T')[1].slice(0, 11), 
             code: `enqueue(ready_queue, P${p.id});`, 
-            explanation: `Process ${p.name} arrived at Time ${prev.currentTime}.` 
+            explanation: `Process ${p.name} enqueued into Ready Queue (AT: ${p.arrivalTime}).` 
           })
         }
       })
@@ -81,10 +81,10 @@ export const ProcessManagement = () => {
           nextReadyQueue = nextReadyQueue.filter(p => p.id !== picked.id)
           quantumRef.current = 0
           nextLogs.push({ 
-            id: `sched-${picked.id}-${prev.currentTime}`, 
+            id: `sched-${picked.id}-${prev.currentTime}-${Math.random().toString(36).substr(2, 5)}`, 
             timestamp: new Date().toISOString().split('T')[1].slice(0, 11), 
             code: `dispatch(P${picked.id}, ${algorithm});`, 
-            explanation: `Scheduler selected Process ${picked.id}.` 
+            explanation: `Scheduler context switch to Process ${picked.id} using ${algorithm}.` 
           })
           nextGanttData.push({ pid: picked.id, start: prev.currentTime, end: nextTime, color: picked.color })
         }
@@ -94,6 +94,10 @@ export const ProcessManagement = () => {
         if (nextGanttData.length > 0) nextGanttData[nextGanttData.length - 1].end = nextTime
         quantumRef.current += 1
 
+        // Sync state back to nextProcesses list while running so table shows progress
+        const pIdx = nextProcesses.findIndex(p => p.id === nextRunning!.id)
+        if (pIdx !== -1) nextProcesses[pIdx] = { ...nextRunning }
+
         // Check Termination
         if (nextRunning.remainingTime <= 0) {
           nextRunning.state = 'terminated'
@@ -101,15 +105,14 @@ export const ProcessManagement = () => {
           nextRunning.turnaroundTime = nextRunning.finishTime - nextRunning.arrivalTime
           nextRunning.waitingTime = nextRunning.turnaroundTime - nextRunning.burstTime
           
-          // Update in main list
-          const idx = nextProcesses.findIndex(px => px.id === nextRunning!.id)
-          if (idx !== -1) nextProcesses[idx] = { ...nextRunning }
+          // Final update in main list
+          if (pIdx !== -1) nextProcesses[pIdx] = { ...nextRunning }
           
           nextLogs.push({ 
-            id: `term-${nextRunning.id}-${prev.currentTime}`, 
+            id: `term-${nextRunning.id}-${prev.currentTime}-${Math.random().toString(36).substr(2, 5)}`, 
             timestamp: new Date().toISOString().split('T')[1].slice(0, 11), 
-            code: `exit(P${nextRunning.id});`, 
-            explanation: `Process ${nextRunning.id} completed at Time ${nextTime}.` 
+            code: `exit(P${nextRunning.id}); // Deallocated`, 
+            explanation: `Process ${nextRunning.id} execution completed. Resources released.` 
           })
           nextRunning = null
           quantumRef.current = 0
@@ -119,25 +122,21 @@ export const ProcessManagement = () => {
           nextRunning.state = 'ready'
           nextReadyQueue.push({ ...nextRunning })
           
-          const idx = nextProcesses.findIndex(px => px.id === nextRunning!.id)
-          if (idx !== -1) nextProcesses[idx] = { ...nextRunning }
+          if (pIdx !== -1) nextProcesses[pIdx] = { ...nextRunning }
 
           nextLogs.push({ 
-            id: `preempt-${nextRunning.id}-${prev.currentTime}`, 
+            id: `preempt-${nextRunning.id}-${prev.currentTime}-${Math.random().toString(36).substr(2, 5)}`, 
             timestamp: new Date().toISOString().split('T')[1].slice(0, 11), 
-            code: `preempt(P${nextRunning.id});`, 
-            explanation: `Time Quantum expired for P${nextRunning.id}.` 
+            code: `preempt(P${nextRunning.id}); // Quantum end`, 
+            explanation: `Time Quantum expired for P${nextRunning.id}. Returning to Ready Queue.` 
           })
           nextRunning = null
           quantumRef.current = 0
         }
       }
 
-      // Sync logs separately or return them?
-      // Since logs are separate state, we can use a side effect or functional update
-      if (nextLogs.length > 0) {
-        setLogs(prevLogs => [...prevLogs.slice(-(20 - nextLogs.length)), ...nextLogs])
-      }
+      const totalLogs = [...prev.logs, ...nextLogs]
+      const slicedLogs = totalLogs.slice(-20)
 
       return {
         processes: nextProcesses,
@@ -145,6 +144,7 @@ export const ProcessManagement = () => {
         readyQueue: nextReadyQueue,
         currentTime: nextTime,
         ganttData: nextGanttData,
+        logs: slicedLogs
       }
     })
   }
@@ -165,8 +165,8 @@ export const ProcessManagement = () => {
       readyQueue: [],
       currentTime: 0,
       ganttData: [],
+      logs: [],
     })
-    setLogs([])
   }
 
   useEffect(() => {
@@ -255,11 +255,17 @@ export const ProcessManagement = () => {
               
               <div className="space-y-4">
                  {!showAddForm ? (
-                   <button onClick={() => setShowAddForm(true)} className="w-full sidebar-item border border-white/5 hover:border-primary/30 group">
-                      <Plus size={20} className="text-primary" />
-                      <span className="font-bold text-sm">Add New Process</span>
-                   </button>
-                 ) : (
+                    <button 
+                      onClick={() => {
+                        setShowAddForm(true);
+                        setNewArrivalTime(currentTime);
+                      }} 
+                      className="w-full sidebar-item border border-white/5 hover:border-primary/30 group"
+                    >
+                       <Plus size={20} className="text-primary" />
+                       <span className="font-bold text-sm">Add New Process</span>
+                    </button>
+                  ) : (
                    <div className="p-6 rounded-3xl bg-white/[0.02] border border-primary/20 space-y-4 shadow-[0_0_20px_rgba(0,243,255,0.05)]">
                        <div className="space-y-1">
                           <label className="text-[10px] uppercase font-bold text-slate-400 px-1">Process Alias</label>
@@ -368,18 +374,21 @@ export const ProcessManagement = () => {
               </h3>
               
               <div className="relative h-24 w-full bg-black/40 rounded-3xl p-3 flex gap-1 items-stretch overflow-x-auto custom-scrollbar border border-white/5 shadow-inner">
-                 <AnimatePresence>
+                 <AnimatePresence mode="popLayout">
                     {ganttData.map((seg, i) => (
                       <motion.div
+                        layout
                         key={`${seg.pid}-${i}`}
-                        initial={{ scaleY: 0, opacity: 0 }}
-                        animate={{ scaleY: 1, opacity: 1 }}
-                        className="relative group min-w-[30px] rounded-xl flex items-center justify-center font-bold text-[10px]"
+                        initial={{ scaleX: 0, opacity: 0 }}
+                        animate={{ scaleX: 1, opacity: 1 }}
+                        transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                        className={`relative group min-w-[30px] rounded-xl flex items-center justify-center font-bold text-[10px] ${seg.pid === runningProcess?.id ? 'shadow-[0_0_15px_rgba(0,243,255,0.2)] brightness-125' : ''}`}
                         style={{ 
                           width: `${(seg.end - seg.start) * 40}px`,
-                          backgroundColor: `${seg.color}22`,
-                          border: `1px solid ${seg.color}44`,
-                          color: seg.color
+                          backgroundColor: `${seg.color}33`,
+                          border: `1px solid ${seg.color}66`,
+                          color: seg.color,
+                          zIndex: seg.pid === runningProcess?.id ? 10 : 1
                         }}
                       >
                          P{seg.pid}
