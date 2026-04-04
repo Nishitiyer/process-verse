@@ -88,7 +88,7 @@ function App() {
           ))}
         </nav>
 
-        <div className="p-6">
+        <div className="p-6 space-y-4">
           <div className="glass-card p-4 rounded-3xl bg-primary/5 border-primary/10">
              <div className="flex items-center gap-3 mb-3">
                <div className="w-2 h-2 rounded-full bg-primary animate-pulse shadow-[0_0_10px_rgba(0,243,255,1)]" />
@@ -96,6 +96,19 @@ function App() {
              </div>
              <p className="text-[10px] text-slate-400 font-medium">Kernel: 5.15.0-generic</p>
              <p className="text-[10px] text-slate-400 font-medium">Uptime: 14h 22m</p>
+          </div>
+          
+          <div className="px-2 space-y-3">
+            <div className="h-px w-full bg-white/5" />
+            <div>
+              <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500 mb-1">Developer</p>
+              <h4 className="text-xs font-black text-white italic tracking-tighter uppercase whitespace-nowrap">Nishit Iyer</h4>
+            </div>
+            <div className="p-3 rounded-2xl bg-white/[0.02] border border-white/5">
+              <p className="text-[9px] text-slate-500 leading-relaxed font-bold italic">
+                "Visualizing the core mechanics of OS scheduling, synchronization, and deadlocks—made by a student, for students, to bridge the gap between theory and execution."
+              </p>
+            </div>
           </div>
         </div>
       </aside>
