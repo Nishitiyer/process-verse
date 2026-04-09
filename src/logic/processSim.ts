@@ -50,9 +50,9 @@ export const getNextProcess = (
     case 'FCFS':
       return readyQueue.sort((a, b) => a.arrivalTime - b.arrivalTime)[0];
     case 'SJF':
-      return readyQueue.sort((a, b) => a.burstTime - b.burstTime || a.arrivalTime - b.arrivalTime)[0];
+      return [...readyQueue].sort((a, b) => a.remainingTime - b.remainingTime || a.arrivalTime - b.arrivalTime)[0];
     case 'Priority':
-      return readyQueue.sort((a, b) => a.priority - b.priority || a.arrivalTime - b.arrivalTime)[0];
+      return [...readyQueue].sort((a, b) => a.priority - b.priority || a.arrivalTime - b.arrivalTime)[0];
     case 'RR':
       return readyQueue[0]; // Round Robin usually takes the head
     default:

@@ -58,7 +58,7 @@ export const ProcessManagement = () => {
       let nextGanttData = [...prev.ganttData]
       let nextLogs: TraceLog[] = []
 
-      // 1. Handle Arrivals (Enhanced logic to catch processes added "late" or with past arrival times)
+      // 1. Handle Arrivals
       nextProcesses.forEach(p => {
         if (p.arrivalTime <= prev.currentTime && p.state === 'new') {
           p.state = 'ready'
@@ -67,14 +67,56 @@ export const ProcessManagement = () => {
             id: `arr-${p.id}-${prev.currentTime}-${Math.random().toString(36).substr(2, 5)}`, 
             timestamp: new Date().toISOString().split('T')[1].slice(0, 11), 
             code: `enqueue(ready_queue, P${p.id});`, 
-            explanation: `Process ${p.name} enqueued into Ready Queue (AT: ${p.arrivalTime}).` 
+            explanation: `Process P${p.id} arrived and entered the Ready Queue.` 
           })
         }
       })
 
-      // 2. Execution Logic
+      // 2. Preemption Check (RR, SJF/SRTF, Priority)
+      if (nextRunning) {
+        let shouldPreempt = false;
+        const bestInQueue = getNextProcess(nextReadyQueue, algorithm);
+        
+        if (algorithm === 'RR' && quantumRef.current >= quantum) {
+          shouldPreempt = true;
+          nextLogs.push({ 
+             id: `preempt-rr-${nextRunning.id}-${prev.currentTime}`,
+             timestamp: new Date().toISOString().split('T')[1].slice(0, 11),
+             code: `yield(P${nextRunning.id});`,
+             explanation: `Time quantum expired for P${nextRunning.id}. Preempting.`
+          });
+        } else if (bestInQueue) {
+          if (algorithm === 'SJF' && bestInQueue.remainingTime < nextRunning.remainingTime) {
+            shouldPreempt = true;
+            nextLogs.push({ 
+               id: `preempt-sjf-${nextRunning.id}-${prev.currentTime}`,
+               timestamp: new Date().toISOString().split('T')[1].slice(0, 11),
+               code: `preempt(P${nextRunning.id}); // SRTF`,
+               explanation: `P${bestInQueue.id} has shorter remaining time. Preempting P${nextRunning.id}.`
+            });
+          } else if (algorithm === 'Priority' && bestInQueue.priority < nextRunning.priority) {
+            shouldPreempt = true;
+            nextLogs.push({ 
+               id: `preempt-prio-${nextRunning.id}-${prev.currentTime}`,
+               timestamp: new Date().toISOString().split('T')[1].slice(0, 11),
+               code: `preempt(P${nextRunning.id}); // High Prio`,
+               explanation: `P${bestInQueue.id} has higher priority (${bestInQueue.priority}). Preempting P${nextRunning.id}.`
+            });
+          }
+        }
+
+        if (shouldPreempt) {
+          nextRunning.state = 'ready';
+          nextReadyQueue.push({ ...nextRunning });
+          const pIdx = nextProcesses.findIndex(p => p.id === nextRunning!.id);
+          if (pIdx !== -1) nextProcesses[pIdx] = { ...nextRunning };
+          nextRunning = null;
+          quantumRef.current = 0;
+        }
+      }
+
+      // 3. Dispatching
       if (!nextRunning && nextReadyQueue.length > 0) {
-        // Scheduler Pick
         const picked = getNextProcess(nextReadyQueue, algorithm)
         if (picked) {
           nextRunning = { ...picked, state: 'running' }
@@ -84,14 +126,14 @@ export const ProcessManagement = () => {
             id: `sched-${picked.id}-${prev.currentTime}-${Math.random().toString(36).substr(2, 5)}`, 
             timestamp: new Date().toISOString().split('T')[1].slice(0, 11), 
             code: `dispatch(P${picked.id}, ${algorithm});`, 
-            explanation: `Scheduler context switch to Process ${picked.id} using ${algorithm}.` 
+            explanation: `CPU idle. Dispatching P${picked.id} from Ready Queue.` 
           })
           nextGanttData.push({ pid: picked.id, start: prev.currentTime, end: prev.currentTime, color: picked.color })
         }
       } 
       
+      // 4. Execution
       if (nextRunning) {
-        // Continue Execution
         nextRunning.remainingTime -= 1
         if (nextGanttData.length > 0) {
            const lastIdx = nextGanttData.length - 1;
@@ -99,58 +141,36 @@ export const ProcessManagement = () => {
         }
         quantumRef.current += 1
 
-        // Sync state back to nextProcesses list while running so table shows progress
         const pIdx = nextProcesses.findIndex(p => p.id === nextRunning!.id)
         if (pIdx !== -1) nextProcesses[pIdx] = { ...nextRunning }
 
-        // Check Termination
         if (nextRunning.remainingTime <= 0) {
           nextRunning.state = 'terminated'
-          // Process actually finishes exactly AT nextTime now that we decremented instantly
           nextRunning.finishTime = nextTime
           nextRunning.turnaroundTime = nextRunning.finishTime - nextRunning.arrivalTime
           nextRunning.waitingTime = nextRunning.turnaroundTime - nextRunning.burstTime
           
-          // Final update in main list
           if (pIdx !== -1) nextProcesses[pIdx] = { ...nextRunning }
           
           nextLogs.push({ 
             id: `term-${nextRunning.id}-${prev.currentTime}-${Math.random().toString(36).substr(2, 5)}`, 
             timestamp: new Date().toISOString().split('T')[1].slice(0, 11), 
-            code: `exit(P${nextRunning.id}); // Deallocated`, 
-            explanation: `Process ${nextRunning.id} execution completed. Resources released.` 
+            code: `exit(P${nextRunning.id});`, 
+            explanation: `Process P${nextRunning.id} complete at tick ${nextTime}.` 
           })
           nextRunning = null
           quantumRef.current = 0
         } 
-        // Check Preemption (RR)
-        else if (algorithm === 'RR' && quantumRef.current >= quantum) {
-          nextRunning.state = 'ready'
-          nextReadyQueue.push({ ...nextRunning })
-          
-          if (pIdx !== -1) nextProcesses[pIdx] = { ...nextRunning }
-
-          nextLogs.push({ 
-            id: `preempt-${nextRunning.id}-${prev.currentTime}-${Math.random().toString(36).substr(2, 5)}`, 
-            timestamp: new Date().toISOString().split('T')[1].slice(0, 11), 
-            code: `preempt(P${nextRunning.id}); // Quantum end`, 
-            explanation: `Time Quantum expired for P${nextRunning.id}. Returning to Ready Queue.` 
-          })
-          nextRunning = null
-          quantumRef.current = 0
-        }
       }
 
       const totalLogs = [...prev.logs, ...nextLogs]
-      const slicedLogs = totalLogs.slice(-20)
-
       return {
         processes: nextProcesses,
         runningProcess: nextRunning,
         readyQueue: nextReadyQueue,
         currentTime: nextTime,
         ganttData: nextGanttData,
-        logs: slicedLogs
+        logs: totalLogs.slice(-20)
       }
     })
   }
@@ -364,7 +384,10 @@ export const ProcessManagement = () => {
                     Load Distribution
                  </div>
                  <div className="h-2 w-full bg-slate-900 rounded-full overflow-hidden">
-                    <div className="h-full w-[65%] bg-gradient-to-r from-primary to-secondary rounded-full shadow-[0_0_15px_rgba(0,243,255,0.4)]" />
+                    <div 
+                        className="h-full bg-gradient-to-r from-primary to-secondary rounded-full shadow-[0_0_15px_rgba(0,243,255,0.4)] transition-all duration-500" 
+                        style={{ width: runningProcess ? '92%' : '4%' }}
+                     />
                  </div>
               </div>
            </div>
@@ -401,11 +424,9 @@ export const ProcessManagement = () => {
                          <div className="absolute -bottom-6 left-0 text-[8px] font-bold text-slate-600 font-mono">
                             {seg.start}
                          </div>
-                         {i === ganttData.length - 1 && (
-                            <div className="absolute -bottom-6 right-0 text-[8px] font-bold text-slate-600 font-mono">
-                               {seg.end}
-                            </div>
-                         )}
+                         <div className="absolute -bottom-6 right-0 text-[8px] font-bold text-slate-600 font-mono">
+                            {seg.end}
+                         </div>
                       </motion.div>
                     ))}
                  </AnimatePresence>
