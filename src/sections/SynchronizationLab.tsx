@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { 
   RotateCcw, 
   Play, 
@@ -11,7 +11,6 @@ import {
   ShieldCheck,
   Zap,
   RefreshCcw, 
-  Activity,
   Layers
 } from 'lucide-react'
 import { AlgorithmDeepDive, OSAlgorithm } from '../components/AlgorithmDeepDive'
@@ -43,7 +42,6 @@ export const SynchronizationLab = () => {
   
   // Producer-Consumer State
   const [buffer, setBuffer] = useState<number[]>([])
-  const [mutex, setMutex] = useState(false)
   
   const timerRef = useRef<any>(null)
 
