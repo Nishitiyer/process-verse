@@ -67,7 +67,7 @@ export const LearnPanel = ({ onNavigate }: LearnPanelProps) => {
 
   if (selectedAlgo) {
     return (
-      <div className="p-12 max-w-7xl mx-auto space-y-8">
+      <div className="p-4 md:p-12 max-w-7xl mx-auto space-y-8">
         <button 
           onClick={() => setSelectedAlgo(null)}
           className="flex items-center gap-2 text-slate-500 hover:text-white transition-colors uppercase font-black text-[10px] tracking-[0.3em] group"
@@ -83,22 +83,22 @@ export const LearnPanel = ({ onNavigate }: LearnPanelProps) => {
   }
 
   return (
-    <div className="p-12 space-y-16 max-w-7xl mx-auto custom-scrollbar">
+    <div className="p-4 md:p-12 space-y-12 md:space-y-16 max-w-7xl mx-auto custom-scrollbar">
       {/* Header */}
-      <div className="flex items-center justify-between glass p-10 rounded-[3rem] border-white/[0.05]">
-        <div className="flex items-center gap-8">
-          <div className="w-20 h-20 rounded-[2rem] bg-primary/10 flex items-center justify-center text-primary shadow-[0_0_30px_rgba(0,243,255,0.15)]">
-            <BookOpen size={40} />
+      <div className="flex flex-col md:flex-row items-center justify-between glass p-6 md:p-10 rounded-[2rem] md:rounded-[3rem] border-white/[0.05] gap-6 md:gap-0">
+        <div className="flex items-center gap-6 md:gap-8">
+          <div className="w-16 h-16 md:w-20 md:h-20 rounded-2xl md:rounded-[2rem] bg-primary/10 flex items-center justify-center text-primary shadow-[0_0_30px_rgba(0,243,255,0.15)]">
+            <BookOpen size={30} className="md:w-10 md:h-10" />
           </div>
           <div>
-            <h1 className="text-4xl font-black italic uppercase tracking-tighter mb-2">ProcessVerse Academy</h1>
+            <h1 className="text-2xl md:text-4xl font-black italic uppercase tracking-tighter mb-1 md:mb-2">Academy</h1>
             <p className="text-slate-500 font-mono text-[10px] uppercase tracking-widest flex items-center gap-2">
               <ShieldCheck size={12} className="text-primary" /> 
               Curriculum Core: v2.0
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-4 text-xs font-bold text-slate-500 uppercase tracking-widest bg-white/5 px-6 py-4 rounded-2xl border border-white/10">
+        <div className="flex items-center gap-4 text-xs font-bold text-slate-500 uppercase tracking-widest bg-white/5 px-4 md:px-6 py-3 md:py-4 rounded-2xl border border-white/10">
            <Activity size={16} className="text-primary animate-pulse" />
            Learning Pulse: Active
         </div>
@@ -161,7 +161,7 @@ export const LearnPanel = ({ onNavigate }: LearnPanelProps) => {
       </div>
 
       {/* Advanced Research Resources */}
-      <section className="glass rounded-[3.5rem] p-16 border-white/[0.05] relative overflow-hidden group">
+      <section className="glass rounded-[2rem] md:rounded-[3.5rem] p-8 md:p-16 border-white/[0.05] relative overflow-hidden group">
          <div className="absolute top-0 right-0 p-16 text-primary/5 -z-10 group-hover:scale-110 transition-transform duration-1000">
             <Layers size={200} />
          </div>
@@ -169,8 +169,8 @@ export const LearnPanel = ({ onNavigate }: LearnPanelProps) => {
          <div className="max-w-3xl space-y-10">
             <div className="space-y-4">
                <h3 className="text-[10px] font-black text-primary uppercase tracking-[0.4em] mono">Advanced Engineering</h3>
-               <h2 className="text-5xl font-black italic uppercase tracking-tighter italic">Deep Dive Resources</h2>
-               <p className="text-slate-400 text-lg font-medium leading-relaxed">
+               <h2 className="text-3xl md:text-5xl font-black italic uppercase tracking-tighter italic">Deep Dive Resources</h2>
+               <p className="text-slate-400 text-base md:text-lg font-medium leading-relaxed">
                  Access peer-reviewed documentation, kernel source snippets, and advanced simulation parameters to extend your knowledge.
                </p>
             </div>

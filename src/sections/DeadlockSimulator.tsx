@@ -183,9 +183,9 @@ export const DeadlockSimulator = () => {
   }
 
   return (
-    <div className="p-12 space-y-12 max-w-7xl mx-auto custom-scrollbar">
+    <div className="p-4 md:p-12 space-y-8 md:space-y-12 max-w-7xl mx-auto custom-scrollbar">
       {/* Header Section */}
-      <div className="flex items-center justify-between glass p-10 rounded-[3rem] border-white/[0.05]">
+      <div className="flex flex-col md:flex-row items-center justify-between glass p-6 md:p-10 rounded-[2rem] md:rounded-[3rem] border-white/[0.05] gap-6 md:gap-0">
         <div className="flex items-center gap-8">
           <div className="w-20 h-20 rounded-[2rem] bg-accent/10 flex items-center justify-center text-accent shadow-[0_0_30px_rgba(255,0,76,0.15)] outline outline-1 outline-accent/30">
             <Lock size={40} />
@@ -408,7 +408,7 @@ export const DeadlockSimulator = () => {
               <motion.div 
                 initial={{ y: 50, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
-                className={`p-12 rounded-[4rem] border-2 flex flex-col md:flex-row items-center gap-12 relative shadow-2xl ${
+                className={`p-6 md:p-12 rounded-[2.5rem] md:rounded-[4rem] border-2 flex flex-col md:flex-row items-center gap-6 md:gap-12 relative shadow-2xl ${
                   safeState.safe ? 'bg-cyan-500/[0.02] border-cyan-500/20 shadow-cyan-500/10' : 'bg-red-500/[0.02] border-red-500/20 shadow-red-500/10'
                 }`}
               >
@@ -427,7 +427,7 @@ export const DeadlockSimulator = () => {
                   </p>
                   
                   {safeState.safe && (
-                    <div className="flex items-center gap-6 flex-wrap mt-8 bg-black/40 p-8 rounded-[3rem] border border-white/5">
+                    <div className="flex items-center gap-4 md:gap-6 flex-wrap mt-8 bg-black/40 p-6 md:p-8 rounded-[2rem] md:rounded-[3rem] border border-white/5 justify-center md:justify-start">
                       {safeState.sequence.map((pid, idx) => (
                         <Fragment key={pid}>
                           <div className="w-16 h-16 rounded-[1.5rem] bg-cyan-500 text-black flex items-center justify-center font-black text-2xl italic shadow-[0_0_30px_rgba(0,243,255,0.5)]">

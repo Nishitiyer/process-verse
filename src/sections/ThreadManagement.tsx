@@ -178,8 +178,8 @@ export const ThreadManagement = () => {
   }
 
   return (
-    <div className="p-12 space-y-12 max-w-7xl mx-auto custom-scrollbar">
-      <div className="flex items-center justify-between glass p-10 rounded-[3rem] border-white/[0.05] relative overflow-hidden">
+    <div className="p-4 md:p-12 space-y-8 md:space-y-12 max-w-7xl mx-auto custom-scrollbar">
+      <div className="flex flex-col md:flex-row items-center justify-between glass p-6 md:p-10 rounded-[2rem] md:rounded-[3rem] border-white/[0.05] relative overflow-hidden gap-6 md:gap-0">
         <div className="flex items-center gap-8">
           <div className="w-20 h-20 rounded-[2rem] bg-secondary/10 flex items-center justify-center text-secondary outline outline-1 outline-secondary/30 shadow-[0_0_30px_rgba(157,0,255,0.15)]">
             <GitBranch size={40} />
@@ -349,7 +349,7 @@ export const ThreadManagement = () => {
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, scale: 0.9 }}
                       transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-                      className="group p-8 rounded-[2.5rem] bg-white/[0.02] border border-white/[0.05] flex flex-col gap-6 relative overflow-hidden hover:bg-white/[0.05] transition-all duration-500"
+                      className="group p-5 md:p-8 rounded-[1.5rem] md:rounded-[2.5rem] bg-white/[0.02] border border-white/[0.05] flex flex-col gap-6 relative overflow-hidden hover:bg-white/[0.05] transition-all duration-500"
                     >
                        <div className="flex items-center justify-between relative z-10">
                           <div className="flex items-center gap-6">

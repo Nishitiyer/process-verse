@@ -35,9 +35,9 @@ const performanceData = [
 
 export const PerformanceGraphs = () => {
   return (
-    <div className="p-12 space-y-12 max-w-7xl mx-auto custom-scrollbar">
+    <div className="p-4 md:p-12 space-y-8 md:space-y-12 max-w-7xl mx-auto custom-scrollbar">
       {/* Header */}
-      <div className="flex items-center justify-between glass p-10 rounded-[3rem] border-white/[0.05]">
+      <div className="flex flex-col md:flex-row items-center justify-between glass p-6 md:p-10 rounded-[2rem] md:rounded-[3rem] border-white/[0.05] gap-6 md:gap-0">
         <div className="flex items-center gap-8">
           <div className="w-20 h-20 rounded-[2rem] bg-secondary/10 flex items-center justify-center text-secondary shadow-[0_0_30px_rgba(157,0,255,0.15)]">
             <BarChart3 size={40} />
@@ -150,7 +150,7 @@ export const PerformanceGraphs = () => {
                 <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-primary" /> Read Ops</span>
              </div>
           </div>
-          <div className="p-10 h-[300px]">
+          <div className="p-6 md:p-10 h-[250px] md:h-[300px]">
              <ResponsiveContainer width="100%" height="100%">
                <BarChart data={performanceData}>
                  <CartesianGrid strokeDasharray="3 3" stroke="#ffffff01" vertical={false} />

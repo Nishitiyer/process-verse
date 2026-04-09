@@ -44,9 +44,9 @@ export const Dashboard = ({ onStart }: DashboardProps) => {
   ]
 
   return (
-    <div className="p-12 space-y-16 max-w-7xl mx-auto">
+    <div className="p-4 md:p-12 space-y-8 md:space-y-16 max-w-7xl mx-auto">
       {/* Hero Section */}
-      <section className="relative overflow-hidden rounded-[4rem] glass p-20 flex flex-col items-center text-center gap-10 border-white/[0.05]">
+      <section className="relative overflow-hidden rounded-[2.5rem] md:rounded-[4rem] glass p-8 md:p-20 flex flex-col items-center text-center gap-6 md:gap-10 border-white/[0.05]">
         <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-secondary/10 -z-10" />
         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary to-transparent opacity-50" />
         
@@ -56,10 +56,10 @@ export const Dashboard = ({ onStart }: DashboardProps) => {
           transition={{ duration: 1, ease: [0.23, 1, 0.32, 1] }}
           className="flex flex-col items-center"
         >
-          <div className="px-5 py-2 rounded-full bg-white/5 border border-white/10 text-[10px] font-bold uppercase tracking-[0.5em] text-slate-400 mb-8 mono">
+          <div className="px-5 py-2 rounded-full bg-white/5 border border-white/10 text-[9px] md:text-[10px] font-bold uppercase tracking-[0.3em] md:tracking-[0.5em] text-slate-400 mb-6 md:mb-8 mono">
             Next-Gen Operating System Simulator
           </div>
-          <h1 className="text-8xl md:text-9xl font-black tracking-tighter leading-none mb-4 italic">
+          <h1 className="text-5xl sm:text-7xl md:text-9xl font-black tracking-tighter leading-none mb-4 italic">
             PROCESS<span className="text-primary">VERSE</span>
           </h1>
           <p className="max-w-3xl text-xl text-slate-400 leading-relaxed font-medium">
@@ -67,7 +67,7 @@ export const Dashboard = ({ onStart }: DashboardProps) => {
           </p>
         </motion.div>
 
-        <div className="flex gap-6 mt-6">
+        <div className="flex flex-col sm:flex-row gap-4 md:gap-6 mt-6 w-full sm:w-auto">
           <button 
             onClick={onStart}
             className="btn-primary flex items-center gap-4 text-base px-10 py-4"

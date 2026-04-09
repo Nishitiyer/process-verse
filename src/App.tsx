@@ -24,6 +24,7 @@ import { LearnPanel } from './sections/LearnPanel'
 function App() {
   const [activeSection, setActiveSection] = useState('processes')
   const [isGlobalPlaying, setIsGlobalPlaying] = useState(false)
+  const [isMenuOpen, setIsMenuOpen] = useState(false)
 
   useEffect(() => {
     const handleToggle = () => setIsGlobalPlaying(p => !p)
@@ -48,9 +49,17 @@ function App() {
 
   return (
     <div className="flex h-screen bg-[#0a0a12] text-slate-100 overflow-hidden">
+      {/* Sidebar Overlay for Mobile */}
+      {isMenuOpen && (
+        <div 
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-30 lg:hidden"
+          onClick={() => setIsMenuOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
-      <aside className="w-72 bg-[#0c0c1e]/50 border-r border-white/[0.05] flex flex-col glass z-20">
-        <div className="p-8 mb-4">
+      <aside className={`fixed lg:static inset-y-0 left-0 w-72 bg-[#0c0c1e]/90 lg:bg-[#0c0c1e]/50 border-r border-white/[0.05] flex flex-col glass z-40 transition-transform duration-300 transform ${isMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
+        <div className="p-8 mb-4 flex justify-between items-center">
           <div className="flex items-center gap-3 group cursor-pointer">
             <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center shadow-[0_0_20px_rgba(0,243,255,0.3)] group-hover:rotate-12 transition-transform duration-500">
               <Cpu size={24} className="text-black" strokeWidth={2.5} />
@@ -60,6 +69,12 @@ function App() {
               <span className="text-[10px] font-bold tracking-[0.3em] text-secondary">VERSE OS v1.1</span>
             </div>
           </div>
+          <button 
+            onClick={() => setIsMenuOpen(false)}
+            className="lg:hidden p-2 text-slate-400 hover:text-white"
+          >
+            <RotateCcw size={20} className="rotate-45" /> 
+          </button>
         </div>
         
         <nav className="flex-1 px-4 space-y-2 overflow-y-auto custom-scrollbar">
@@ -67,7 +82,10 @@ function App() {
           {navItems.map((item) => (
             <button
               key={item.id}
-              onClick={() => setActiveSection(item.id)}
+              onClick={() => {
+                setActiveSection(item.id);
+                setIsMenuOpen(false);
+              }}
               className={`sidebar-item group ${
                 activeSection === item.id 
                 ? 'sidebar-item-active' 
@@ -101,8 +119,12 @@ function App() {
           <div className="px-2 space-y-3">
             <div className="h-px w-full bg-white/5" />
             <div>
-              <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500 mb-1">Developer</p>
-              <h4 className="text-xs font-black text-white italic tracking-tighter uppercase whitespace-nowrap">Nishit Iyer</h4>
+              <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500 mb-1">Developers</p>
+              <h4 className="text-xs font-black text-white italic tracking-tighter uppercase leading-tight">
+                Nishit Iyer<br />
+                Om Singh<br />
+                Yash Sanke
+              </h4>
             </div>
             <div className="p-3 rounded-2xl bg-white/[0.02] border border-white/5">
               <p className="text-[9px] text-slate-500 leading-relaxed font-bold italic">
@@ -120,17 +142,24 @@ function App() {
         <div className="absolute bottom-[-10%] left-[10%] w-[30%] h-[30%] bg-secondary/5 blur-[120px] rounded-full -z-10" />
 
         {/* Header */}
-        <header className="h-20 border-b border-white/[0.05] flex items-center justify-between px-10 bg-[#0a0a12]/40 backdrop-blur-xl z-10">
+        <header className="h-20 border-b border-white/[0.05] flex items-center justify-between px-4 lg:px-10 bg-[#0a0a12]/40 backdrop-blur-xl z-10">
           <div className="flex items-center gap-4">
-            <h2 className="text-2xl font-black text-white tracking-tight uppercase italic">
+            <button 
+              onClick={() => setIsMenuOpen(true)}
+              className="lg:hidden p-2 bg-white/5 rounded-xl text-primary"
+            >
+              <LayoutDashboard size={20} />
+            </button>
+            <h2 className="text-lg lg:2xl font-black text-white tracking-tight uppercase italic truncate max-w-[120px] lg:max-w-none">
               {navItems.find(n => n.id === activeSection)?.label}
             </h2>
             <div className="h-4 w-px bg-slate-800 hidden md:block" />
             <span className="text-xs font-mono text-slate-500 hidden md:block uppercase tracking-widest">Environment / Lab_Sector_01</span>
           </div>
           
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-2 lg:gap-6">
             <div className="hidden lg:flex items-center gap-4 px-6 py-2 rounded-full bg-slate-900/50 border border-slate-800 font-mono text-[10px]">
+
               <div className="flex flex-col items-center">
                 <span className="text-slate-500 uppercase tracking-tighter">CPU Load</span>
                 <span className="text-primary font-bold">12.4%</span>

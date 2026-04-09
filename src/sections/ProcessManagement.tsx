@@ -237,9 +237,9 @@ export const ProcessManagement = () => {
   }
 
   return (
-    <div className="p-12 space-y-12 max-w-7xl mx-auto custom-scrollbar">
+    <div className="p-4 md:p-12 space-y-8 md:space-y-12 max-w-7xl mx-auto custom-scrollbar">
       {/* Simulation Header */}
-      <div className="flex items-center justify-between glass p-8 rounded-[2.5rem] border-white/[0.05]">
+      <div className="flex flex-col md:flex-row items-center justify-between glass p-6 md:p-8 rounded-[2rem] md:rounded-[2.5rem] border-white/[0.05] gap-6 md:gap-0">
         <div className="flex items-center gap-6">
           <div className="w-16 h-16 rounded-3xl bg-primary/10 flex items-center justify-center text-primary group-hover:rotate-12 transition-all">
             <Cpu size={32} />
@@ -273,7 +273,7 @@ export const ProcessManagement = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
         {/* Process Controls */}
         <div className="lg:col-span-4 space-y-8">
            <div className="glass-card flex flex-col gap-8">
