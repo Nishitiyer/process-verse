@@ -123,7 +123,7 @@ function App() {
               <h4 className="text-xs font-black text-white italic tracking-tighter uppercase leading-tight">
                 Nishit Iyer<br />
                 Om Singh<br />
-                Yash Sanke
+                Yash Sankhe
               </h4>
             </div>
             <div className="p-3 rounded-2xl bg-white/[0.02] border border-white/5">
