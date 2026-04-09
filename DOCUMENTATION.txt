@@ -1,0 +1,160 @@
+PROCESS-VERSE: THE DEFINITIVE OS ARCHITECTURE ENCYCLOPEDIA (A-Z)
+================================================================
+
+CHAPTER 1: PROCESS SCHEDULING THEORY
+-------------------------------------
+
+1.1 Fundamental Scheduling Metrics
+The following metrics are used by the simulator for performance evaluation:
+* Arrival Time (AT): Time at which the process enters the Ready Queue.
+* Burst Time (BT): The total CPU time required by the process.
+* Turnaround Time (TAT): Total residency time in the system. Formula: FT - AT.
+* Waiting Time (WT): Total time spent in the Ready Queue. Formula: TAT - BT.
+
+1.2 CPU vs I/O Bound Processes
+* CPU-Bound: Processes that spend most of their time doing computations (e.g., video rendering).
+* I/O-Bound: Processes that spend most of their time waiting for Input/Output (e.g., web browsers).
+
+1.3 Algorithm Walkthroughs
+* FCFS (First-Come, First-Served): Non-preemptive. Simple queue logic.
+* SRTF (Shortest Remaining Time First): Preemptive version of SJF. Re-evaluates at every clock tick.
+* Round Robin (RR): Every process gets a static "Time Quantum."
+* Priority Scheduling: Higher priority tasks preempt lower ones.
+
+CHAPTER 2: DEADLOCK AVOIDANCE & BANKER'S ALGORITHM
+--------------------------------------------------
+
+2.1 The Four Conditions for Deadlock (Coffman Conditions)
+1. Mutual Exclusion: One resource can only be held by one process at a time.
+2. Hold and Wait: A process holding one resource is waiting for another.
+3. No Preemption: Resources cannot be forcibly taken away.
+4. Circular Wait: A set of processes are waiting for each other in a circle.
+
+2.2 Banker's Algorithm Math
+Implementing Dijkstra's safety algorithm:
+- Max: Peak capacity needed.
+- Allocation: Current count held.
+- Available: System liquidity.
+- Need: Max - Allocation.
+
+Analogy: Think of a Site Manager managing cranes. If granting a request could lead to no one being able to finish, the request is denied.
+
+CHAPTER 3: PROCESS SYNCHRONIZATION
+----------------------------------
+
+3.1 Requirements for Solution
+To solve the Critical Section problem, 3 conditions must be met:
+1. Mutual Exclusion: Only one process is in the critical section.
+2. Progress: If no one is inside, the entry decision cannot be delayed indefinitely.
+3. Bounded Waiting: There is a limit on how many others can jump the line.
+
+3.2 Classic Problems
+* Producer-Consumer: Managing a shared buffer using Mutex and Counting Semaphores.
+* Dining Philosophers: Avoiding deadlock while sharing resources (forks) in a circle.
+* Readers-Writers: Allowing multiple readers but exclusive access for writers.
+
+CHAPTER 4: MASTER VIVA CHEAT SHEET (30 DETAILED ANSWERS)
+--------------------------------------------------------
+
+Q1: What is a "Context Switch" and how does it happen?
+Answer: A Context Switch is the process of storing the state (PCB) of a currently running process so that it can be paused and resumed later. It involves saving CPU registers, program counter, and stack pointer. It is overhead because the CPU does no useful work during the switch.
+
+Q2: What exactly is the "Ready Queue"?
+Answer: It is a data structure in memory storing all processes that are ready to run but waiting for the CPU. In our simulator, every arrival enters this state.
+
+Q3: Difference between SJF and SRTF?
+Answer: SJF is usually non-preemptive. SRTF (Shortest Remaining Time First) is the preemptive version. It re-checks at every arrival or tick to see if a newer, shorter job has arrived.
+
+Q4: What is "Aging" and why is it used?
+Answer: Aging is a technique to prevent "Starvation" in priority scheduling. It gradually increases the priority of processes that have been waiting in the queue for a long time.
+
+Q5: What is the "Convoy Effect"?
+Answer: In FCFS, when a long CPU-bound process blocks many short processes behind it, leading to poor utilization.
+
+Q6: Why is Round Robin best for interactive systems?
+Answer: It is fair and provides good responsiveness because every process gets a frequent, small slice of time.
+
+Q7: Can Banker's Algorithm "Prevent" a Deadlock?
+Answer: No, it is an "Avoidance" algorithm. Prevention breaks the 4 conditions completely. Avoidance checks if a state is safe before granting resources.
+
+Q8: Difference between Threads and Processes?
+Answer: A Process has its own address space. A Thread is a subset of a process and shares memory with other threads of the same process, making it "lightweight."
+
+Q9: What is "Thrashing"?
+Answer: When a system spends more time swapping pages in/out of RAM than executing code, causing CPU usage to drop to near-zero.
+
+Q10: What is "Mutual Exclusion"?
+Answer: The core principle that only one process can access a critical resource at a time.
+
+Q11: What is a "System Call"?
+Answer: An interface between a user program and the OS kernel for requesting hardware services.
+
+Q12: Interrupts vs Traps?
+Answer: Interrupts are hardware-triggered (timer, keyboard). Traps are software-triggered (error, system call).
+
+Q13: What is "Context Switch Overhead"?
+Answer: The time lost during a context switch which doesn't contribute to process execution.
+
+Q14: Explain "Preemptive Scheduling" with an example.
+Answer: The OS takes the CPU away from a process. Example: A higher priority process arrives and kicks the current one out.
+
+Q15: What is the "Critical Section Problem"?
+Answer: The challenge of ensuring no two processes access shared data at the same time.
+
+Q16: Can Deadlock happen with a single resource?
+Answer: No, it requires at least a circular dependency between two resources.
+
+Q17: What is "Belady's Anomaly"?
+Answer: In FIFO page replacement, increasing frames can sometimes increase page faults.
+
+Q18: What is "Multilevel Feedback Queue" (MLFQ)?
+Answer: A complex algorithm that moves processes between queues based on their past execution behavior.
+
+Q19: What is "Priority Inversion"?
+Answer: When a high-priority process is blocked by a low-priority one holding a lock.
+
+Q20: Difference between "Starvation" and "Deadlock"?
+Answer: Starvation is being denied resources perpetually. Deadlock is everyone waiting for each other.
+
+Q21: What is "Safe State"?
+Answer: A state where there exists at least one sequence of process completions that avoids deadlock.
+
+Q22: Internal vs External Fragmentation?
+Answer: Internal is wasted space inside a block (Paging). External is wasted space between blocks (Segmentation).
+
+Q23: What is "Paging"?
+Answer: A memory management scheme that eliminates the need for contiguous allocation by dividing memory into fixed blocks.
+
+Q24: What is a "Semaphore"?
+Answer: A variable or abstract data type used to control access to a common resource by multiple processes.
+
+Q25: Mutual Exclusion vs Synchronization?
+Answer: Mutex is about "one at a time." Synchronization is about the "order of execution."
+
+Q26: What is a "Process Control Block" (PCB)?
+Answer: A data structure in the OS containing all info about a process (ID, State, PC, Registers).
+
+Q27: What is "Context"?
+Answer: The registers and current state needed to resume a process later.
+
+Q28: Why use "Gantt Charts"?
+Answer: To visually track how the CPU is allocated over time.
+
+Q29: How does our simulator "Tick"?
+Answer: It uses a JS timer acting as a hardware clock heartbeat.
+
+Q30: What is the "Kernel"?
+Answer: The core part of the OS that manages CPU, Memory, and Devices.
+
+CHAPTER 5: CODE ARCHITECTURE
+-----------------------------
+
+5.1 The Virtual Heartbeat (tick())
+The tick() function in ProcessManagement.tsx acts as the Hardware Clock interrupt. It runs on a 500ms interval.
+
+5.2 Simulation State (simState)
+Acting as the Virtual RAM, simState stores the PCB for every process. Changes trigger React re-renders.
+
+----------------------------------------------------------------
+END OF ENCYCLOPEDIA
+----------------------------------------------------------------
