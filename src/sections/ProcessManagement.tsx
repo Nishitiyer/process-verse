@@ -86,12 +86,17 @@ export const ProcessManagement = () => {
             code: `dispatch(P${picked.id}, ${algorithm});`, 
             explanation: `Scheduler context switch to Process ${picked.id} using ${algorithm}.` 
           })
-          nextGanttData.push({ pid: picked.id, start: prev.currentTime, end: nextTime, color: picked.color })
+          nextGanttData.push({ pid: picked.id, start: prev.currentTime, end: prev.currentTime, color: picked.color })
         }
-      } else if (nextRunning) {
+      } 
+      
+      if (nextRunning) {
         // Continue Execution
         nextRunning.remainingTime -= 1
-        if (nextGanttData.length > 0) nextGanttData[nextGanttData.length - 1].end = nextTime
+        if (nextGanttData.length > 0) {
+           const lastIdx = nextGanttData.length - 1;
+           nextGanttData[lastIdx] = { ...nextGanttData[lastIdx], end: nextTime };
+        }
         quantumRef.current += 1
 
         // Sync state back to nextProcesses list while running so table shows progress
@@ -101,6 +106,7 @@ export const ProcessManagement = () => {
         // Check Termination
         if (nextRunning.remainingTime <= 0) {
           nextRunning.state = 'terminated'
+          // Process actually finishes exactly AT nextTime now that we decremented instantly
           nextRunning.finishTime = nextTime
           nextRunning.turnaroundTime = nextRunning.finishTime - nextRunning.arrivalTime
           nextRunning.waitingTime = nextRunning.turnaroundTime - nextRunning.burstTime
@@ -476,7 +482,10 @@ export const ProcessManagement = () => {
                     {readyQueue.length === 0 && <p className="text-center text-slate-700 italic text-xs py-10 font-mono uppercase tracking-widest">Queue_Empty</p>}
                  </div>
               </div>
-           </div>
+            </div>
+
+            {/* Live Code Tracer moved here for discoverability */}
+            <LiveCodeTracer logs={logs} />
 
            {/* Metrics Table */}
            <div className="glass-card">
@@ -533,9 +542,6 @@ export const ProcessManagement = () => {
         </div>
       </div>
       
-      {/* Live Code Tracer */}
-      <LiveCodeTracer logs={logs} />
-
       <AlgorithmDeepDive algorithm={algorithm} />
     </div>
   )

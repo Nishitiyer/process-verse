@@ -162,14 +162,27 @@ function App() {
 
         {/* Section Content */}
         <div className="flex-1 overflow-y-auto custom-scrollbar relative p-0 m-0">
-          {activeSection === 'dashboard' && <Dashboard onStart={() => setActiveSection('processes')} />}
-          {activeSection === 'processes' && <ProcessManagement />}
-          {activeSection === 'threads' && <ThreadManagement />}
-          {activeSection === 'deadlocks' && <DeadlockSimulator />}
-          {activeSection === 'sync' && <SynchronizationLab />}
-          {activeSection === 'performance' && <PerformanceGraphs />}
-          {activeSection === 'learn' && <LearnPanel onNavigate={setActiveSection} />}
-          {!navItems.find(n => n.id === activeSection) && <Dashboard onStart={() => setActiveSection('processes')} />}
+          <div className={activeSection === 'dashboard' || !navItems.find(n => n.id === activeSection) ? 'block' : 'hidden'}>
+             <Dashboard onStart={() => setActiveSection('processes')} />
+          </div>
+          <div className={activeSection === 'processes' ? 'block' : 'hidden'}>
+             <ProcessManagement />
+          </div>
+          <div className={activeSection === 'threads' ? 'block' : 'hidden'}>
+             <ThreadManagement />
+          </div>
+          <div className={activeSection === 'deadlocks' ? 'block' : 'hidden'}>
+             <DeadlockSimulator />
+          </div>
+          <div className={activeSection === 'sync' ? 'block' : 'hidden'}>
+             <SynchronizationLab />
+          </div>
+          <div className={activeSection === 'performance' ? 'block' : 'hidden'}>
+             <PerformanceGraphs />
+          </div>
+          <div className={activeSection === 'learn' ? 'block' : 'hidden'}>
+             <LearnPanel onNavigate={setActiveSection} />
+          </div>
         </div>
       </main>
     </div>
