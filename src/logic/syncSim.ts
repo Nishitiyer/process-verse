@@ -1,4 +1,4 @@
-export type SyncProblem = 'ProducerConsumer' | 'DiningPhilosophers' | 'MutexDemo';
+export type SyncProblem = 'ProducerConsumer' | 'DiningPhilosophers' | 'MutexDemo' | 'ReadersWriters';
 
 export interface SyncState {
   buffer: number[];

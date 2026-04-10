@@ -11,7 +11,8 @@ import {
   ShieldCheck,
   Zap,
   RefreshCcw, 
-  Layers
+  Layers,
+  BookOpen
 } from 'lucide-react'
 import { AlgorithmDeepDive, OSAlgorithm } from '../components/AlgorithmDeepDive'
 import { LiveCodeTracer, TraceLog } from '../components/LiveCodeTracer'
@@ -26,7 +27,7 @@ interface Philosopher {
 }
 
 export const SynchronizationLab = () => {
-  const [activeLab, setActiveLab] = useState<'philosophers' | 'producer-consumer'>('philosophers')
+  const [activeLab, setActiveLab] = useState<'philosophers' | 'producer-consumer' | 'readers-writers'>('philosophers')
   
   // Dining Philosophers State
   const [philosophers, setPhilosophers] = useState<Philosopher[]>([
@@ -42,6 +43,16 @@ export const SynchronizationLab = () => {
   
   // Producer-Consumer State
   const [buffer, setBuffer] = useState<number[]>([])
+  const [pcIndices, setPcIndices] = useState({ in: 0, out: 0 })
+  
+  // Readers-Writers State
+  const [rwState, setRwState] = useState({
+    readers: 0,
+    isWriting: false,
+    waitingReaders: 0,
+    waitingWriters: 0,
+    database: 42
+  })
   
   const timerRef = useRef<any>(null)
 
@@ -98,25 +109,110 @@ export const SynchronizationLab = () => {
       setPhilosophers(nextPhils)
       setForks(nextForks)
     } else if (activeLab === 'producer-consumer') {
-      const isProducer = Math.random() > 0.5
+      const action = Math.random() > 0.5 ? 'produce' : 'consume'
       let newLog: TraceLog | null = null
       
-      if (isProducer) {
+      if (action === 'produce') {
         if (buffer.length < 8) {
-          setBuffer(prev => [...prev, 1])
-          newLog = { id: Date.now().toString(), timestamp: new Date().toISOString().split('T')[1].slice(0, 11), code: `wait(empty); wait(mutex); append(); signal(mutex); signal(full);`, explanation: `Producer added an item to the buffer. Slots filled: ${buffer.length + 1}/8.` }
+          const newItem = Math.floor(Math.random() * 100)
+          setBuffer(prev => [...prev, newItem])
+          setPcIndices(prev => ({ ...prev, in: (prev.in + 1) % 8 }))
+          newLog = { 
+            id: Date.now().toString(), 
+            timestamp: new Date().toISOString().split('T')[1].slice(0, 11), 
+            code: `wait(empty); wait(mutex); buffer[in] = item; in = (in+1)%8; signal(mutex); signal(full);`, 
+            explanation: `PRODUCER: Secured Mutex and Empty-Semaphore. Appended value ${newItem} at index ${pcIndices.in}.` 
+          }
         } else {
-          newLog = { id: Date.now().toString(), timestamp: new Date().toISOString().split('T')[1].slice(0, 11), code: `// PRODUCER_SLEEP: Buffer Full`, explanation: `Buffer index at capacity. Producer is blocked until Consumer frees a slot.` }
+          newLog = { 
+            id: Date.now().toString(), 
+            timestamp: new Date().toISOString().split('T')[1].slice(0, 11), 
+            code: `// BLOCKED: wait(empty);`, 
+            explanation: `PRODUCER BLOCKED: All 8 slots are occupied. Producer is yielding CPU until Consumer clears space.` 
+          }
         }
       } else {
         if (buffer.length > 0) {
-          setBuffer(prev => prev.slice(0, -1))
-          newLog = { id: Date.now().toString(), timestamp: new Date().toISOString().split('T')[1].slice(0, 11), code: `wait(full); wait(mutex); take(); signal(mutex); signal(empty);`, explanation: `Consumer removed an item. Slots remaining: ${buffer.length - 1}/8.` }
+          setBuffer(prev => prev.slice(1))
+          setPcIndices(prev => ({ ...prev, out: (prev.out + 1) % 8 }))
+          newLog = { 
+            id: Date.now().toString(), 
+            timestamp: new Date().toISOString().split('T')[1].slice(0, 11), 
+            code: `wait(full); wait(mutex); item = buffer[out]; out = (out+1)%8; signal(mutex); signal(empty);`, 
+            explanation: `CONSUMER: Secured Mutex and Full-Semaphore. Removed item from index ${pcIndices.out}.` 
+          }
         } else {
-          newLog = { id: Date.now().toString(), timestamp: new Date().toISOString().split('T')[1].slice(0, 11), code: `// CONSUMER_SLEEP: Buffer Empty`, explanation: `No data available. Consumer is idling until Producer generates output.` }
+          newLog = { 
+            id: Date.now().toString(), 
+            timestamp: new Date().toISOString().split('T')[1].slice(0, 11), 
+            code: `// BLOCKED: wait(full);`, 
+            explanation: `CONSUMER BLOCKED: Buffer underflow detected. Consumer is yielding until Producer generates data.` 
+          }
         }
       }
       
+      if (newLog) setLogs(prev => [...prev.slice(-20), newLog!])
+    } else if (activeLab === 'readers-writers') {
+      const action = Math.random() > 0.5 ? 'reader' : 'writer'
+      const startAction = Math.random() > 0.3 // 70% chance to start/end vs stay same
+      let newLog: TraceLog | null = null
+
+      if (action === 'reader') {
+        if (startAction && !rwState.isWriting) {
+          // Reader enters
+          setRwState(prev => ({ ...prev, readers: prev.readers + 1 }))
+          newLog = {
+            id: Date.now().toString(),
+            timestamp: new Date().toISOString().split('T')[1].slice(0, 11),
+            code: `wait(mutex); readcount++; if(readcount==1) wait(wrt); signal(mutex);`,
+            explanation: `READER ENTERED: Reader count is now ${rwState.readers + 1}. First reader locks Writer access.`
+          }
+        } else if (!startAction && rwState.readers > 0) {
+          // Reader leaves
+          setRwState(prev => ({ ...prev, readers: prev.readers - 1 }))
+          newLog = {
+            id: Date.now().toString(),
+            timestamp: new Date().toISOString().split('T')[1].slice(0, 11),
+            code: `wait(mutex); readcount--; if(readcount==0) signal(wrt); signal(mutex);`,
+            explanation: `READER LEFT: Reader count is now ${rwState.readers - 1}. Last reader releases Writer lock.`
+          }
+        } else if (startAction && rwState.isWriting) {
+          newLog = {
+            id: Date.now().toString(),
+            timestamp: new Date().toISOString().split('T')[1].slice(0, 11),
+            code: `// BLOCKED: Writer has exclusive lock`,
+            explanation: `READER BLOCKED: A writer is currently updating the system. Readers must wait.`
+          }
+        }
+      } else {
+        if (startAction && rwState.readers === 0 && !rwState.isWriting) {
+          // Writer enters
+          setRwState(prev => ({ ...prev, isWriting: true, database: prev.database + 1 }))
+          newLog = {
+            id: Date.now().toString(),
+            timestamp: new Date().toISOString().split('T')[1].slice(0, 11),
+            code: `wait(wrt); // Critical Section: writing...`,
+            explanation: `WRITER STARTED: Writer acquired exclusive 'wrt' lock. Database incremented to ${rwState.database + 1}.`
+          }
+        } else if (!startAction && rwState.isWriting) {
+          // Writer leaves
+          setRwState(prev => ({ ...prev, isWriting: false }))
+          newLog = {
+            id: Date.now().toString(),
+            timestamp: new Date().toISOString().split('T')[1].slice(0, 11),
+            code: `signal(wrt); // Exit CS`,
+            explanation: `WRITER FINISHED: Writer released exclusive lock. System now available for Readers.`
+          }
+        } else if (startAction && (rwState.readers > 0 || rwState.isWriting)) {
+          newLog = {
+            id: Date.now().toString(),
+            timestamp: new Date().toISOString().split('T')[1].slice(0, 11),
+            code: `// BLOCKED: Consumers or other Writer active`,
+            explanation: `WRITER BLOCKED: Cannot enter while readers (${rwState.readers}) or another writer are active.`
+          }
+        }
+      }
+
       if (newLog) setLogs(prev => [...prev.slice(-20), newLog!])
     }
   }
@@ -126,6 +222,14 @@ export const SynchronizationLab = () => {
     setPhilosophers(philosophers.map(p => ({ ...p, status: 'thinking' })))
     setForks([true, true, true, true, true])
     setBuffer([])
+    setPcIndices({ in: 0, out: 0 })
+    setRwState({
+      readers: 0,
+      isWriting: false,
+      waitingReaders: 0,
+      waitingWriters: 0,
+      database: 42
+    })
   }
 
   return (
@@ -175,6 +279,7 @@ export const SynchronizationLab = () => {
                   {[
                     { id: 'philosophers', label: 'Dining Philosophers', icon: Coffee },
                     { id: 'producer-consumer', label: 'Bounded Buffer', icon: Layers },
+                    { id: 'readers-writers', label: 'Readers-Writers', icon: BookOpen },
                   ].map(lab => (
                     <button 
                       key={lab.id}
@@ -203,7 +308,11 @@ export const SynchronizationLab = () => {
                    </div>
                    <div className="flex justify-between items-center text-[10px] font-bold text-slate-500 uppercase tracking-widest">
                       <span>Wait Queue</span>
-                      <span className="text-secondary mono">Empty</span>
+                      <span className="text-secondary mono">
+                        {activeLab === 'philosophers' ? 'No Deadlock' : 
+                         activeLab === 'producer-consumer' ? (buffer.length === 8 ? 'Producer Waiting' : buffer.length === 0 ? 'Consumer Waiting' : 'None') :
+                         (rwState.isWriting ? 'Readers Blocked' : rwState.readers > 0 ? 'Writers Blocked' : 'Normal')}
+                      </span>
                    </div>
                 </div>
             </div>
@@ -277,52 +386,136 @@ export const SynchronizationLab = () => {
                       )
                     })}
                  </div>
-               ) : (
-                 <div className="flex flex-col items-center gap-12 w-full max-w-2xl px-4 md:px-10">
-                    <div className="flex items-center gap-8 md:gap-20">
-                       <div className="flex flex-col items-center gap-4">
-                          <div className="w-16 h-16 md:w-24 md:h-24 rounded-3xl bg-primary/10 border border-primary/30 flex items-center justify-center text-primary animate-pulse">
-                             <RotateCcw size={30} className="animate-spin" style={{ animationDuration: '3s' }} />
-                          </div>
-                          <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Producer</span>
-                       </div>
-                       
-                       <div className="flex-1 flex gap-1 md:gap-3 h-24 md:h-32 p-2 md:p-4 glass rounded-[2rem] items-end">
-                          <AnimatePresence>
-                             {buffer.map((_, i) => (
-                               <motion.div 
-                                 key={i}
-                                 initial={{ y: -50, opacity: 0 }}
-                                 animate={{ y: 0, opacity: 1 }}
-                                 exit={{ y: 50, opacity: 0 }}
-                                 className="flex-1 bg-gradient-to-t from-primary to-secondary rounded-lg shadow-[0_0_15px_rgba(157,0,255,0.3)]"
-                                 style={{ height: `${20 + (i * 10)}%` }}
-                               />
-                             ))}
-                          </AnimatePresence>
-                          {buffer.length === 0 && <div className="flex-1 flex items-center justify-center text-slate-700 italic text-[10px] mb-8">BUFFER_EMPTY</div>}
-                       </div>
+                ) : activeLab === 'producer-consumer' ? (
+                  <div className="flex flex-col items-center gap-12 w-full max-w-2xl px-4 md:px-10">
+                     <div className="flex items-center gap-8 md:gap-20">
+                        <div className="flex flex-col items-center gap-4">
+                           <div className="w-16 h-16 md:w-24 md:h-24 rounded-3xl bg-primary/10 border border-primary/30 flex items-center justify-center text-primary animate-pulse">
+                              <RotateCcw size={30} className="animate-spin" style={{ animationDuration: '3s' }} />
+                           </div>
+                           <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Producer</span>
+                        </div>
+                        
+                        <div className="flex-1 flex gap-1 md:gap-3 h-24 md:h-32 p-2 md:p-4 glass rounded-[2rem] items-end border-white/5">
+                           <AnimatePresence>
+                              {buffer.map((val, i) => (
+                                <motion.div 
+                                  key={`${i}-${val}`}
+                                  initial={{ y: -50, opacity: 0 }}
+                                  animate={{ y: 0, opacity: 1 }}
+                                  exit={{ y: 50, opacity: 0 }}
+                                  className="flex-1 bg-gradient-to-t from-primary to-secondary rounded-lg shadow-[0_0_15px_rgba(38,0,255,0.3)] relative group"
+                                  style={{ height: `${30 + (i * 8)}%` }}
+                                >
+                                   <div className="absolute -top-6 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap text-[8px] font-bold text-primary">ID: {val}</div>
+                                </motion.div>
+                              ))}
+                           </AnimatePresence>
+                           {buffer.length === 0 && <div className="flex-1 flex items-center justify-center text-slate-700 italic text-[10px] mb-8 uppercase tracking-widest">Buffer_Empty</div>}
+                        </div>
 
-                       <div className="flex flex-col items-center gap-4">
-                          <div className="w-16 h-16 md:w-24 md:h-24 rounded-3xl bg-secondary/10 border border-secondary/30 flex items-center justify-center text-secondary">
-                             <Zap size={30} className="animate-pulse" />
+                        <div className="flex flex-col items-center gap-4">
+                           <div className="w-16 h-16 md:w-24 md:h-24 rounded-3xl bg-secondary/10 border border-secondary/30 flex items-center justify-center text-secondary">
+                              <Zap size={30} className="animate-pulse" />
+                           </div>
+                           <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Consumer</span>
+                        </div>
+                     </div>
+                     
+                     <div className="w-full flex justify-between items-center px-4 md:px-10">
+                        <div className="flex flex-col items-center">
+                           <span className="text-[10px] font-bold text-slate-600 uppercase mb-2">Semaphore: Empty</span>
+                           <span className="text-xl md:text-2xl font-black text-primary">{8 - buffer.length}</span>
+                        </div>
+                        <div className="flex flex-col items-center">
+                           <span className="text-[10px] font-bold text-slate-600 uppercase mb-2">Ptr: In / Out</span>
+                           <span className="text-xl md:text-2xl font-black text-slate-400 font-mono italic">{pcIndices.in} / {pcIndices.out}</span>
+                        </div>
+                        <div className="flex flex-col items-center">
+                           <span className="text-[10px] font-bold text-slate-600 uppercase mb-2">Semaphore: Full</span>
+                           <span className="text-xl md:text-2xl font-black text-secondary">{buffer.length}</span>
+                        </div>
+                     </div>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center gap-12 w-full max-w-4xl px-4">
+                    <div className="grid grid-cols-3 gap-8 md:gap-16 w-full items-center">
+                      {/* Readers Side */}
+                      <div className="space-y-6">
+                        <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] text-center">Active Readers</h4>
+                        <div className="grid grid-cols-2 gap-3">
+                          {Array.from({ length: 4 }).map((_, i) => (
+                            <motion.div
+                              key={`reader-${i}`}
+                              animate={i < rwState.readers ? { scale: 1.1, backgroundColor: 'rgba(0, 243, 255, 0.1)' } : { scale: 1 }}
+                              className={`aspect-square rounded-2xl border flex items-center justify-center transition-all ${i < rwState.readers ? 'border-primary/40 text-primary shadow-[0_0_15px_rgba(0,243,255,0.1)]' : 'border-white/5 text-slate-700'}`}
+                            >
+                               <User size={16} />
+                            </motion.div>
+                          ))}
+                        </div>
+                        <div className="text-center">
+                          <span className="text-3xl font-black text-primary italic tracking-tighter">{rwState.readers}</span>
+                          <p className="text-[8px] font-bold text-slate-600 uppercase">Current Count</p>
+                        </div>
+                      </div>
+
+                      {/* Shared Database */}
+                      <div className="flex flex-col items-center justify-center relative">
+                        <motion.div 
+                          animate={rwState.isWriting ? { 
+                            scale: [1, 1.05, 1],
+                            borderColor: ['rgba(157,0,255,0.2)', 'rgba(157,0,255,0.6)', 'rgba(157,0,255,0.2)']
+                          } : { scale: 1 }}
+                          transition={{ repeat: Infinity, duration: 1 }}
+                          className={`w-32 h-32 md:w-48 md:h-48 rounded-[3rem] border-4 flex flex-col items-center justify-center gap-2 bg-black/40 relative z-10 transition-colors duration-500 ${rwState.isWriting ? 'border-secondary shadow-[0_0_40px_rgba(157,0,255,0.2)]' : rwState.readers > 0 ? 'border-primary/30 shadow-[0_0_40px_rgba(0,243,255,0.1)]' : 'border-white/10'}`}
+                        >
+                          <Layers size={rwState.isWriting ? 40 : 32} className={`transition-all duration-500 ${rwState.isWriting ? 'text-secondary' : rwState.readers > 0 ? 'text-primary' : 'text-slate-700'}`} />
+                          <div className="text-center">
+                            <span className={`text-2xl font-black italic tracking-tighter ${rwState.isWriting ? 'text-secondary' : 'text-white'}`}>{rwState.database}</span>
+                            <p className="text-[8px] font-black uppercase text-slate-500 tracking-widest mt-1">Shared_Store</p>
                           </div>
-                          <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Consumer</span>
-                       </div>
+                          
+                          {/* Pulsing rings */}
+                          {rwState.isWriting && (
+                            <>
+                              <div className="absolute inset-0 rounded-[3rem] border border-secondary animate-ping opacity-20" />
+                              <div className="absolute -inset-4 rounded-[4rem] border border-secondary/20 animate-pulse" />
+                            </>
+                          )}
+                        </motion.div>
+                        
+                        {/* Lock Display */}
+                        <div className="mt-8 flex gap-4">
+                          <div className={`px-4 py-2 rounded-xl border text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all ${rwState.readers > 0 ? 'bg-primary/10 border-primary/30 text-primary' : 'bg-white/5 border-white/10 text-slate-600'}`}>
+                            {rwState.readers > 0 ? <Lock size={12} /> : <Unlock size={12} />} Read_Lock
+                          </div>
+                          <div className={`px-4 py-2 rounded-xl border text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all ${rwState.isWriting ? 'bg-secondary/10 border-secondary/30 text-secondary' : 'bg-white/5 border-white/10 text-slate-600'}`}>
+                             {rwState.isWriting ? <Lock size={12} /> : <Unlock size={12} />} Write_Lock
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Writer Side */}
+                      <div className="flex flex-col items-center gap-6">
+                        <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Active Writer</h4>
+                        <motion.div
+                          animate={rwState.isWriting ? { 
+                            rotate: 360,
+                            scale: 1.2
+                          } : { rotate: 0, scale: 1 }}
+                          transition={rwState.isWriting ? { repeat: Infinity, duration: 4, ease: "linear" } : {}}
+                          className={`w-20 h-20 md:w-28 md:h-28 rounded-[2rem] border-2 flex items-center justify-center transition-all duration-500 ${rwState.isWriting ? 'bg-secondary/10 border-secondary text-secondary shadow-[0_0_30px_rgba(157,0,255,0.3)]' : 'bg-white/5 border-white/10 text-slate-800'}`}
+                        >
+                          <Zap size={rwState.isWriting ? 32 : 24} />
+                        </motion.div>
+                        <div className={`text-center transition-opacity ${rwState.isWriting ? 'opacity-100' : 'opacity-30'}`}>
+                           <span className="text-[10px] font-black text-secondary uppercase tracking-widest animate-pulse italic">In_Critical_Section</span>
+                        </div>
+                      </div>
                     </div>
-                    
-                    <div className="w-full flex justify-between items-center px-4 md:px-10">
-                       <div className="flex flex-col items-center">
-                          <span className="text-[10px] font-bold text-slate-600 uppercase mb-2">Semaphore: Empty</span>
-                          <span className="text-xl md:text-2xl font-black text-primary">{8 - buffer.length}</span>
-                       </div>
-                       <div className="flex flex-col items-center">
-                          <span className="text-[10px] font-bold text-slate-600 uppercase mb-2">Semaphore: Full</span>
-                          <span className="text-xl md:text-2xl font-black text-secondary">{buffer.length}</span>
-                       </div>
-                    </div>
-                 </div>
-               )}
+                  </div>
+                )}
 
                {/* Background Decorators */}
                <div className="absolute inset-0 -z-10 opacity-20 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle at 50% 50%, rgba(0, 243, 255, 0.05) 0%, transparent 70%)' }} />
