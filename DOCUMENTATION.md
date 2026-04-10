@@ -53,6 +53,14 @@ To solve the Critical Section problem, 3 conditions must be met:
 - **Mutex**: A sleep-based lock. If you can't get in, you go to sleep.
 - **Semaphores**: Can allow *N* processes to enter (Counting) or just 1 (Binary).
 
+### 3.3 The Readers-Writers Logic
+- **Reader's Goal**: Read shared data without corruption. Multiple readers can read simultaneously.
+- **Writer's Goal**: Update shared data. Must have **Exclusive Access** (No other readers or writers).
+- **The Protocol**: 
+    1. The *First Reader* to arrive takes the "Writer Lock."
+    2. Subsequent readers enter freely while the lock is held.
+    3. The *Last Reader* to leave releases the "Writer Lock," allowing waiting writers to enter.
+
 ---
 
 ## CHAPTER 4: THE MASTER VIVA CHEAT SHEET (Detailed Answers)
