@@ -30,6 +30,7 @@ export const ProcessManagement = () => {
   const { processes, runningProcess, readyQueue, currentTime, ganttData, logs } = simState
 
   const [algorithm, setAlgorithm] = useState<'FCFS'|'SJF'|'Priority'|'RR'>('FCFS')
+  const [isPreemptive, setIsPreemptive] = useState(true)
   const [quantum, setQuantum] = useState(2)
   const [timeStep] = useState(500) // ms per tick
 
@@ -85,7 +86,7 @@ export const ProcessManagement = () => {
              code: `yield(P${nextRunning.id});`,
              explanation: `Time quantum expired for P${nextRunning.id}. Preempting.`
           });
-        } else if (bestInQueue) {
+        } else if (isPreemptive && bestInQueue) {
           if (algorithm === 'SJF' && bestInQueue.remainingTime < nextRunning.remainingTime) {
             shouldPreempt = true;
             nextLogs.push({ 
@@ -360,7 +361,7 @@ export const ProcessManagement = () => {
                          </button>
                        </div>
                     </div>
-                    {algorithm === 'RR' ? (
+                     {algorithm === 'RR' ? (
                       <div className="flex justify-between items-center text-[10px] uppercase font-bold text-slate-500 tracking-widest">
                          <span>Time Quantum</span>
                          <div className="flex items-center gap-1.5">
@@ -370,9 +371,18 @@ export const ProcessManagement = () => {
                          </div>
                       </div>
                     ) : (
-                      <div className="flex justify-between items-center text-[10px] uppercase font-bold text-slate-500 tracking-widest opacity-30">
-                         <span>Time Quantum</span>
-                         <span className="text-slate-500 font-mono">N/A</span>
+                      <div className="flex justify-between items-center text-[10px] uppercase font-bold text-slate-500 tracking-widest">
+                         <span>Preemption</span>
+                         <button 
+                            onClick={() => (algorithm !== 'FCFS') && setIsPreemptive(!isPreemptive)}
+                            disabled={algorithm === 'FCFS'}
+                            className={`px-3 py-1 rounded-lg text-[9px] font-black transition-all ${
+                              algorithm === 'FCFS' ? 'opacity-30 cursor-not-allowed' :
+                              isPreemptive ? 'bg-primary/20 text-primary border border-primary/30' : 'bg-slate-800 text-slate-500 border border-white/5'
+                            }`}
+                         >
+                            {algorithm === 'FCFS' ? 'OFF' : isPreemptive ? 'ENABLED (SRTF/PP)' : 'DISABLED'}
+                         </button>
                       </div>
                     )}
                  </div>
